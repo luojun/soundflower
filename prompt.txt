@@ -1,3 +1,54 @@
- I would like to create a simple simulation. The environment is 2D. A simple robotic arm is mounted at the center of a circle. It may have anywhere between 1 DOF to 3DOF. We can think of it as an arm with 1 to 3 links, with the "shoulder" link pivot around the center of the circle. At the other tip of the arm is mounted a speaker or a light sensor. This makes the whole thing a "sound flower" or "sunflower". Along the circle could appear either a sound source or a light source. The arm with all its links fully extended may or may not be able to reach the circle or the rim of the circular disk. Alternatively, we can think of the circle as having potentially various radius, somethings the radius shorter than the total arm length and somethings longer. The arm will be driven at the joints between two links and in the case of the shoulder joint, between the shoulder link or "upper arm" and the pivoting point "on the ground". There is no gravity, or we can think of the 2D environment as being flat on the ground. The joints all offer limitless turning in both direction. But there is friction at the joints. The joints are controlled with torque. Thus the links have mass. For simplicity, we can assume that the mass is concentrated at the midpoint of a link. Please write code to generate such a simulation environment, and run it as a demo. 
+ I would like to create a simple simulation in Python that serves as an RL
+ environment.
+ 
+ The environment is 2D. There is no gravity, or we can think of the 2D
+ environment as being flat on the ground without frictio with the ground. 
+ 
+ A simple robotic arm is mounted at the center of a circle. It may have
+ anywhere between 1 DOF to 3DOF. We can think of it as an arm with 1 to 3
+ links, with the "shoulder" link pivoting around the center of the circle.
+ At the other tip of the arm is mounted an array of microphones. For now,
+ we can assume that there is only a single mic. (In future versions, there
+ will likely be multiple mics forming an array.)
+ 
+ This makes the whole thing a "sound flower" in that the agent will be
+ incentivized to track the sound source. For example, the RL reward could 
+ be tied to the level of sound energy being picked up by the microphone
+ array, such as the *delta* or the time derivative of sound energy at the
+ mic array.
+ 
+ Along the circle could appear a single sound source. In future versions,
+ multiple sound sources could appear in principle anywhere on the 2D plane
+ and being moving, as if at a cocktail party.
 
-Please implement it in Python.
+ The arm with all its links fully extended may or may not be able to reach
+ the circumference of the circle or the rim of the circular disk.
+ Additionally, the circle's radius could vary. Sometimes the radius is
+ shorter than the total arm length and sometimes longer.
+ 
+ The arm will be driven at the joints between two links and in the case of
+ the shoulder joint, between the shoulder link or "upper arm" and the
+ pivoting point "on the ground". The joints all offer limitless turning in
+ both direction. But there is friction at the joints. And joint friction
+ could vary within a reasonable range with a "frozen joint" being possible.
+ The joints are controlled with torque. And the links have mass that could
+ also vary individually and independently. For simplicity, we can assume
+ that the mass is concentrated at the midpoint of a link. For simplicity,
+ we do not need to care about the self-collision of the arm, as if each link
+ occupies its own plane.
+
+ In sum, the design need to (1) accommodate the many kinds of variations
+ with "knobs" for changing these appropriately exposed with reasonable
+ default values and default dynamics: number of links, link length,
+ friction at joints, number of microphones,
+ number, position and motion of sound sources, as well as possibly gain
+ of microphones and strength of sound sources, and even the coefficient
+ of sound attenuation over distance (for the inverse square law) etc; and
+ (2) differentiate the environment and the agent clearly and link them
+ together with a well designed and crucially asynchronoous interface,
+ unlike OpenAI Gym's synchronous interface.   
+ 
+ Please write Python code to generate such a simulated RL environment,
+ please implement a simple heuristic, i.e. unlearning, agent, and run
+ the agent and the environment together as an integrated demo.
+ 
