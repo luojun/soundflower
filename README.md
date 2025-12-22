@@ -15,6 +15,7 @@ Sound Flower is a 2D robotic arm reinforcement learning environment where an age
 - **Asynchronous interface**: Unlike OpenAI Gym's synchronous interface, this environment uses async/await for more flexible agent-environment interaction
 - **Configurable parameters**: Extensive configuration options for arm dynamics, sound sources, and environment properties
 - **Heuristic agent**: Included simple heuristic agent for demonstration
+- **Visualization**: Comprehensive visualization package with static plots and real-time animations
 
 ## Installation
 
@@ -24,10 +25,22 @@ pip install -r requirements.txt
 
 ## Quick Start
 
-Run the demo:
+Run the basic demo:
 
 ```bash
-python demo.py
+python3 demo.py
+```
+
+Run the matplotlib visualization demo:
+
+```bash
+python3 demo_visualization.py
+```
+
+Run the Pygame real-time animation demo (recommended for dynamic visualization):
+
+```bash
+python3 demo_pygame.py
 ```
 
 ## Project Structure
@@ -42,7 +55,13 @@ soundflower/
 ├── agents/               # Agent implementations
 │   ├── __init__.py
 │   └── heuristic_agent.py  # Simple heuristic agent
-├── demo.py              # Demo script
+├── visualization/        # Visualization package
+│   ├── __init__.py
+│   ├── visualizer.py     # Matplotlib visualization tools
+│   └── pygame_visualizer.py  # Pygame real-time animation
+├── demo.py              # Basic demo script
+├── demo_visualization.py # Matplotlib visualization demo
+├── demo_pygame.py        # Pygame real-time animation demo
 ├── requirements.txt     # Python dependencies
 └── README.md           # This file
 ```
@@ -139,6 +158,67 @@ Actions are torques applied at each joint:
 ## Heuristic Agent
 
 The included heuristic agent uses a simple PD controller to point the arm toward the nearest sound source. It can be used as a baseline or starting point for more sophisticated agents.
+
+## Visualization
+
+The visualization package provides multiple ways to visualize the environment:
+
+### Pygame Real-time Animation (Recommended)
+
+The Pygame visualizer provides smooth real-time animation with interactive controls:
+
+```python
+from visualization import PygameVisualizer
+
+visualizer = PygameVisualizer(
+    circle_radius=config.circle_radius,
+    link_lengths=config.link_lengths,
+    window_size=(800, 800),
+    fps=60
+)
+
+# Animate in real-time
+await visualizer.animate(env, agent, max_steps=10000, steps_per_frame=1)
+```
+
+**Features:**
+- Smooth 60 FPS real-time rendering
+- Animated sound waves (pulsing circles)
+- Interactive controls (SPACE to pause, ESC/Q to quit)
+- Real-time display of step count, sound energy, and positions
+- Shows arm motion, sound source motion, and dynamic updates
+
+### Matplotlib Visualization
+
+For static plots and recorded animations:
+
+```python
+from visualization import SoundFlowerVisualizer
+
+visualizer = SoundFlowerVisualizer(
+    circle_radius=config.circle_radius,
+    link_lengths=config.link_lengths
+)
+
+# Static plot
+render_data = env.render()
+visualizer.plot_state(render_data, observation=observation, show=True)
+
+# Real-time animation (matplotlib)
+await visualizer.animate_async(env, agent, max_steps=200, update_interval=0.05)
+
+# Create animation from data
+anim = visualizer.create_animation(render_data_sequence, interval=50)
+```
+
+**Visualization Elements:**
+- The circular environment boundary
+- The robotic arm (links and joints)
+- The end effector with microphone
+- Sound sources with animated wave visualization
+- Real-time sound energy display
+- Step counter and position information
+- Grid background for reference
 
 ## License
 

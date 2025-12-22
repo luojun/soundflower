@@ -5,6 +5,7 @@ import numpy as np
 from soundflower.environment import SoundFlowerEnvironment
 from soundflower.config import SoundFlowerConfig
 from agents.heuristic_agent import HeuristicAgent
+from visualization import SoundFlowerVisualizer
 
 
 async def main():
@@ -68,6 +69,13 @@ async def main():
     print(f"  Sound source position: {observation.sound_source_positions[0]}")
     print(f"  Initial sound energy: {observation.sound_energy:.4f}")
     
+    # Create visualizer for static snapshot
+    visualizer = SoundFlowerVisualizer(
+        circle_radius=config.circle_radius,
+        link_lengths=config.link_lengths,
+        figsize=(10, 10)
+    )
+    
     total_reward = 0.0
     for step in range(100):
         action = await agent.select_action(observation)
@@ -84,10 +92,17 @@ async def main():
             print(f"  Distance to source: {info['end_effector_distance_to_source']:.4f}")
             print(f"  Cumulative reward: {total_reward:.4f}")
     
+    # Show final state visualization
+    print("\nDisplaying final state visualization...")
+    final_render_data = env.render()
+    visualizer.plot_state(final_render_data, observation=observation, show=True)
+    visualizer.close()
+    
     print(f"\nFinal cumulative reward: {total_reward:.4f}")
     print("\n" + "=" * 60)
     print("Demo complete!")
     print("=" * 60)
+    print("\nNote: For animated visualization, run: python demo_visualization.py")
 
 
 if __name__ == "__main__":
