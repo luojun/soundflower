@@ -1,0 +1,9 @@
+Please generate project files according to @prompt.txt .
+
+Please create a git ignore file appropriate for this project.
+
+Please add visualization. Please consider keeping the visualization code in a separate package.
+
+Please actually do animation -- animated rendering of the environment dynamics, including the robotic arm's motion and the sound source motion. Maybe consider using Pygame?
+
+
