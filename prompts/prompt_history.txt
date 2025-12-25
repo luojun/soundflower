@@ -4,11 +4,59 @@ Please generate project files according to @prompt.txt .
 Please create a git ignore file appropriate for this project.
 
 ~~
-Please add visualization. Please consider keeping the visualization code in a separate package.
+Please add visualization. Please consider keeping the visualization code
+in a separate package.
 
 ~~
-Please actually do animation -- animated rendering of the environment dynamics, including the robotic arm's motion and the sound source motion. Maybe consider using Pygame?
+Please actually do animation -- animated rendering of the environment
+dynamics, including the robotic arm's motion and the sound source motion.
+Maybe consider using Pygame?
 
 ~~
-Currently the @agents/heuristic_agent.py implementation has the HeristicAgent holding a reference to the environment object, which is less than ideal. It needs that for the "run_episode" method. However, the run_episode method really belongs elsewhere. Suggestion: please refactor the code such that we have an "experiments" package under which methods such as run_episode could live. Similarly, the repetitive code in @demo.py @demo_pygame.py and @demo_visualization.py could be refactored into an Experiment class under the experiments package and thus greatly simplfied.
+Currently the @agents/heuristic_agent.py implementation has the HeristicAgent
+holding a reference to the environment object, which is less than ideal. It
+needs that for the "run_episode" method. However, the run_episode method
+really belongs elsewhere. Suggestion: please refactor the code such that we
+ have an "experiments" package under which methods such as run_episode could
+ live. Similarly, the repetitive code in @demo.py @demo_pygame.py and
+ @demo_visualization.py could be refactored into an Experiment class under
+ the experiments package and thus greatly simplfied.
+~
+Note that in @demo_pygame.py @demo.py and @demo_visualization.py ,
+create_default_config was repeated three times. This method really belongs
+to @experiments/experiment.py . Furthermore, please reconsider how experiment
+level config should be used by the SoundFlowerEnvironment class and the
+HeuristicAgent class. For now, it's probably OK to expose the config to them
+directly. Please refactor further.
+
+~~
+We need to rectify how physics simulation is done, how it is coupled with
+visualization, and how it is coupled with agent observation and action.
+At a high level, the physics simulation cycle, the visualization cycle,
+and the agent cycle (observation to decision) should all be asynchronoous.
+These are then flexibly coupled under adjustable freqencies. The physics
+simulation is to be governed by a changeable time step size, which is how
+it discretize in time the underlying continuous physics. Then the simulation
+frequency depends on how fast the simulation computation could run. This
+frequency may be left unknown to be determined empirically on actual
+computers. The visualization frequency needs to be suitable for human
+observers, which means it is to be flexible in an acceptable range, such as
+between 10fps and 100fps, the specific value could be picked according to
+how fast the rendering engine (e.g. Pygame here) could run with respect to
+the physics engine. I.e. there could be a somewhat flexible mapping between
+fps and time step size of physical simulation. The agent interaction
+frequency needs to be suitable for how fast the agent decision could run
+(the mapping from observation to action). We can assume it's somewhere
+between 10hz to 100hz. We can also call this the "control frequency".
+Please refactor the code to (1) introduce a proper (2D) physics engine to
+run the physical simulation with changeable time step size, (2) use
+flexible control frequency to integrate agent's interaction with the 
+physical environment, (3) allow a headless mode with integrated physics
+simulation and agent control to run much faster than real time, and (4)
+allow a flexible visualization frequency to watch the simulation at any
+speed-up ratio that is reasonable.
+~
+Can you study this repo: https://github.com/luojun/OmegaZero/tree/master ?
+To see whether there's anything to borrow from there? Maybe look into the
+Runner, Renderer, and World (Environment) differentiation and interfadces? 
 

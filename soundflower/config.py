@@ -31,6 +31,14 @@ class SoundFlowerConfig:
     dt: float = 0.01  # Time step for simulation
     max_torque: float = 10.0  # Maximum torque that can be applied at joints
     
+    # Simulation frequencies
+    control_frequency: float = 50.0  # Agent control frequency in Hz (10-100)
+    visualization_fps: float = 60.0  # Visualization frame rate (10-100)
+    
+    # Headless mode
+    headless: bool = False  # Run without visualization (faster than real-time)
+    real_time_factor: float = 1.0  # Speed multiplier (1.0 = real-time, >1.0 = faster)
+    
     # Sound source behavior
     sound_source_angular_velocity: float = 0.0  # Angular velocity for moving sound source (rad/s)
     sound_source_initial_angle: float = 0.0  # Initial angle of sound source (rad)
