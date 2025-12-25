@@ -4,24 +4,38 @@ import numpy as np
 from typing import Optional
 import asyncio
 
-from soundflower.environment import Observation, SoundFlowerEnvironment
+from soundflower.environment import Observation
+from soundflower.config import SoundFlowerConfig
 
 
 class HeuristicAgent:
     """Simple heuristic agent that points the arm toward the sound source."""
     
-    def __init__(self, environment: SoundFlowerEnvironment, kp: float = 5.0, kd: float = 0.5):
+    def __init__(self, kp: float = 5.0, kd: float = 0.5, 
+                 max_torque: Optional[float] = None, config: Optional[SoundFlowerConfig] = None):
         """
         Initialize heuristic agent.
         
         Args:
-            environment: The environment to interact with
             kp: Proportional gain for PD controller
             kd: Derivative gain for PD controller
+            max_torque: Maximum torque that can be applied (for clamping). 
+                       If None and config is provided, uses config.max_torque.
+            config: Optional configuration object. If provided, max_torque is taken from config
+                    if max_torque is None.
         """
-        self.env = environment
         self.kp = kp  # Proportional gain
         self.kd = kd  # Derivative gain
+        
+        # Determine max_torque: prefer explicit parameter, then config, then default
+        if max_torque is not None:
+            self.max_torque = max_torque
+        elif config is not None:
+            self.max_torque = config.max_torque
+        else:
+            self.max_torque = 10.0  # Default
+        
+        self.config = config
         
         # Target angle for the end effector (to point at sound source)
         self.target_angle = 0.0
@@ -117,49 +131,7 @@ class HeuristicAgent:
         torques = proportional_torques + derivative_torques
         
         # Clamp to valid range
-        max_torque = self.env.config.max_torque
-        torques = np.clip(torques, -max_torque, max_torque)
+        torques = np.clip(torques, -self.max_torque, self.max_torque)
         
         return torques
-    
-    async def run_episode(self, max_steps: int = 1000, render: bool = False) -> dict:
-        """
-        Run a single episode.
-        
-        Args:
-            max_steps: Maximum number of steps
-            render: Whether to collect render data
-            
-        Returns:
-            episode_stats: Statistics about the episode
-        """
-        observation = self.env.reset()
-        
-        total_reward = 0.0
-        steps = 0
-        render_data = []
-        
-        for step in range(max_steps):
-            # Select action
-            action = await self.select_action(observation)
-            
-            # Step environment
-            observation, reward, done, info = await self.env.step(action)
-            
-            total_reward += reward
-            steps += 1
-            
-            if render:
-                render_data.append(self.env.render())
-            
-            if done:
-                break
-        
-        return {
-            'total_reward': total_reward,
-            'steps': steps,
-            'final_sound_energy': observation.sound_energy,
-            'final_distance_to_source': info.get('end_effector_distance_to_source', float('inf')),
-            'render_data': render_data if render else None
-        }
 

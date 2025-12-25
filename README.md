@@ -55,6 +55,9 @@ soundflower/
 ├── agents/               # Agent implementations
 │   ├── __init__.py
 │   └── heuristic_agent.py  # Simple heuristic agent
+├── experiments/          # Experiment runners
+│   ├── __init__.py
+│   └── experiment.py     # Experiment class for running episodes
 ├── visualization/        # Visualization package
 │   ├── __init__.py
 │   ├── visualizer.py     # Matplotlib visualization tools
@@ -96,11 +99,13 @@ The environment can be configured using `SoundFlowerConfig`:
 
 ## Usage
 
-### Creating an Environment
+### Creating an Environment and Agent
 
 ```python
 from soundflower.environment import SoundFlowerEnvironment
 from soundflower.config import SoundFlowerConfig
+from agents.heuristic_agent import HeuristicAgent
+from experiments import Experiment
 
 config = SoundFlowerConfig(
     num_links=2,
@@ -109,19 +114,38 @@ config = SoundFlowerConfig(
 )
 
 env = SoundFlowerEnvironment(config)
+agent = HeuristicAgent(kp=8.0, kd=1.0, max_torque=config.max_torque)
 ```
 
 ### Running an Episode
 
 ```python
 import asyncio
+from experiments import Experiment
 
+# Create experiment
+experiment = Experiment(env, agent)
+
+# Run episode
 async def run_episode():
+    stats = await experiment.run_episode(max_steps=1000, render=False)
+    print(f"Total reward: {stats['total_reward']:.4f}")
+    print(f"Steps: {stats['steps']}")
+
+asyncio.run(run_episode())
+```
+
+### Manual Episode Control
+
+```python
+import asyncio
+
+async def manual_episode():
     observation = env.reset()
     
     for step in range(1000):
         # Your agent selects an action (torques for each joint)
-        action = np.array([0.5, -0.3])  # Example action
+        action = await agent.select_action(observation)
         
         # Step the environment asynchronously
         observation, reward, done, info = await env.step(action)
@@ -129,7 +153,7 @@ async def run_episode():
         # Reward is the change in sound energy (delta)
         print(f"Step {step}: Reward = {reward:.4f}, Sound Energy = {observation.sound_energy:.4f}")
 
-asyncio.run(run_episode())
+asyncio.run(manual_episode())
 ```
 
 ### Observation Space
@@ -158,6 +182,29 @@ Actions are torques applied at each joint:
 ## Heuristic Agent
 
 The included heuristic agent uses a simple PD controller to point the arm toward the nearest sound source. It can be used as a baseline or starting point for more sophisticated agents.
+
+**Note:** The agent no longer holds a reference to the environment. The `max_torque` parameter is passed during initialization for action clamping.
+
+## Experiments Package
+
+The `experiments` package provides the `Experiment` class for running episodes and collecting statistics:
+
+```python
+from experiments import Experiment
+
+experiment = Experiment(env, agent)
+
+# Run a simple episode
+stats = await experiment.run_episode(max_steps=1000, render=False)
+
+# Run with logging
+stats = await experiment.run_episode_with_logging(max_steps=100, log_interval=20)
+
+# Collect render data for visualization
+render_data = await experiment.collect_render_data(max_steps=100)
+```
+
+This separation of concerns makes the code more modular and easier to test.
 
 ## Visualization
 

@@ -1,10 +1,9 @@
 """Demo script with visualization for Sound Flower environment."""
 
 import asyncio
-import numpy as np
 from soundflower.environment import SoundFlowerEnvironment
-from soundflower.config import SoundFlowerConfig
 from agents.heuristic_agent import HeuristicAgent
+from experiments import Experiment, create_default_config
 from visualization import SoundFlowerVisualizer
 
 
@@ -15,35 +14,19 @@ async def main():
     print("=" * 60)
     
     # Create configuration
-    config = SoundFlowerConfig(
-        num_links=2,
-        link_lengths=[0.6, 0.4],
-        link_masses=[1.0, 0.8],
-        joint_frictions=[0.1, 0.15],
-        circle_radius=1.0,
-        num_microphones=1,
-        microphone_gain=1.0,
-        num_sound_sources=1,
-        sound_source_strength=2.0,
-        sound_attenuation_coeff=1.0,
-        dt=0.01,
-        max_torque=5.0,
-        sound_source_angular_velocity=0.2,  # Sound source moves slowly
-        sound_source_initial_angle=np.pi / 4  # Start at 45 degrees
-    )
-    
-    print("\nConfiguration:")
-    print(f"  Number of links: {config.num_links}")
-    print(f"  Link lengths: {config.link_lengths}")
-    print(f"  Circle radius: {config.circle_radius}")
-    print(f"  Total arm length: {sum(config.link_lengths):.2f}")
-    print(f"  Sound source angular velocity: {config.sound_source_angular_velocity:.2f} rad/s")
+    config = create_default_config(sound_source_angular_velocity=0.2)
     
     # Create environment
     env = SoundFlowerEnvironment(config)
     
-    # Create agent
-    agent = HeuristicAgent(env, kp=8.0, kd=1.0)
+    # Create agent (config passed for max_torque)
+    agent = HeuristicAgent(kp=8.0, kd=1.0, config=config)
+    
+    # Create experiment
+    experiment = Experiment(env, agent, config)
+    
+    # Print configuration
+    experiment.print_config()
     
     # Create visualizer
     visualizer = SoundFlowerVisualizer(
@@ -83,18 +66,7 @@ async def main():
     print("=" * 60)
     
     # Collect render data for animation
-    observation = env.reset()
-    render_data_sequence = []
-    
-    for step in range(100):
-        render_data = env.render()
-        render_data_sequence.append(render_data)
-        
-        action = await agent.select_action(observation)
-        observation, reward, done, info = await env.step(action)
-        
-        if done:
-            break
+    render_data_sequence = await experiment.collect_render_data(max_steps=100)
     
     # Create animation
     anim = visualizer.create_animation(render_data_sequence, interval=50)
@@ -113,4 +85,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
