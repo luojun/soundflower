@@ -2,8 +2,7 @@
 
 import asyncio
 from typing import Optional, Callable, Dict, Any
-from .world import World
-from .config import SoundFlowerConfig
+from soundflower import World
 
 
 class Runner:
@@ -21,7 +20,7 @@ class Runner:
     - Visualization: runs at visualization_fps (10-100 fps, optional)
     """
     
-    def __init__(self, world: World, agent, config: SoundFlowerConfig):
+    def __init__(self, world: World, agent, config):
         """
         Initialize runner.
         

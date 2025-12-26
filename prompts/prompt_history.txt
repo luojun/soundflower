@@ -75,3 +75,24 @@ use a single demo implementation? We already have a headless mode.
 ~~
 Rename the @animation package to animator.
 
+~~
+Let's do a round of cleanup and refactoring: (1) Move create_default_config
+in experiment.py into config.py in the soundflower package; (2) Remove 
+experimemnt.py and simulation_experiment.py; (3) Rename the experiments
+package into "experimenter"; (4) Move "config.py" and "runner.py" from 
+the soundflower package into the renamed "experimenter" package; (5) Move 
+the Observation dataclass from environment.py into world.py; (6) Remove
+the old environment.py; (7) Create a new package called "environment";
+(8) Move world.py, physics.py, and physics_engine.py into this new
+environment package; (9) Move renderer.py into the animator package;
+(10) Rename pygame_animator into pygame_framer, and adjust the references
+to it as well as the classes it implements appriopriately.
+~
+Update README.md and ARCHITECTURE.md to reflect the current state of the code.
+~
+Remove soundflower/world.py and soundflower/config.py.
+~
+Remove simulation_loop.py, move world.py from the environment package
+into the soundflower package, update all references in README.md if any.
+Remove ARCHITECTURE.md, update all references to it if any.
+

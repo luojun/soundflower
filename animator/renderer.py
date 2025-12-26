@@ -2,8 +2,7 @@
 
 import asyncio
 from typing import Callable, Dict, Any, Optional
-from .world import World
-from .config import SoundFlowerConfig
+from soundflower import World
 
 
 class Renderer:
@@ -14,7 +13,7 @@ class Renderer:
     Can be attached/detached from a running simulation.
     """
     
-    def __init__(self, world: World, config: SoundFlowerConfig,
+    def __init__(self, world: World, config,
                  render_callback: Callable[[Dict[str, Any]], bool],
                  fps: float = 60.0):
         """

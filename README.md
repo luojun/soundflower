@@ -41,20 +41,24 @@ python3 demo.py --headless
 
 ```
 soundflower/
-├── soundflower/          # Main package
+├── environment/         # Core simulation package
 │   ├── __init__.py
-│   ├── config.py         # Configuration parameters
-│   ├── physics.py        # Physics simulation (arm dynamics, sound propagation)
-│   └── environment.py   # Asynchronous RL environment
-├── agents/               # Agent implementations
+│   ├── physics.py       # Physics simulation (arm dynamics, sound propagation)
+│   └── physics_engine.py  # Asynchronous physics engine
+├── experimenter/        # Experiment orchestration package
+│   ├── __init__.py
+│   ├── config.py        # Configuration parameters
+│   └── runner.py        # Runner for orchestrating simulation
+├── animator/            # Visualization package
+│   ├── __init__.py
+│   ├── renderer.py      # Renderer interface
+│   └── pygame_framer.py # Pygame real-time framer
+├── agents/              # Agent implementations
 │   ├── __init__.py
 │   └── heuristic_agent.py  # Simple heuristic agent
-├── experiments/          # Experiment runners
-│   ├── __init__.py
-│   └── experiment.py     # Experiment class for running episodes
-├── animator/            # Animator package
-│   ├── __init__.py
-│   └── pygame_animator.py  # Pygame real-time animator
+├── soundflower/         # Main package
+│   ├── __init__.py      # Package exports
+│   └── world.py         # World/Environment interface
 ├── demo.py              # Demo script (supports --headless flag)
 ├── requirements.txt     # Python dependencies
 └── README.md           # This file
@@ -90,61 +94,115 @@ The environment can be configured using `SoundFlowerConfig`:
 
 ## Usage
 
-### Creating an Environment and Agent
+### Creating a World and Agent
 
 ```python
-from soundflower.environment import SoundFlowerEnvironment
-from soundflower.config import SoundFlowerConfig
+from soundflower import World
+from experimenter import SoundFlowerConfig, create_default_config
 from agents.heuristic_agent import HeuristicAgent
-from experiments import Experiment
 
-config = SoundFlowerConfig(
-    num_links=2,
-    link_lengths=[0.6, 0.4],
-    circle_radius=1.0
-)
+# Create configuration
+config = create_default_config(sound_source_angular_velocity=0.3)
+# Or create custom config:
+# config = SoundFlowerConfig(
+#     num_links=2,
+#     link_lengths=[0.6, 0.4],
+#     circle_radius=1.0
+# )
 
-env = SoundFlowerEnvironment(config)
-agent = HeuristicAgent(kp=8.0, kd=1.0, max_torque=config.max_torque)
+# Create World (simulation state)
+world = World(config)
+
+# Create Agent
+agent = HeuristicAgent(kp=8.0, kd=1.0, config=config)
 ```
 
-### Running an Episode
+### Running a Simulation
 
 ```python
 import asyncio
-from experiments import Experiment
+from experimenter import Runner
+from animator import Renderer, PygameFramer
 
-# Create experiment
-experiment = Experiment(env, agent)
-
-# Run episode
-async def run_episode():
-    stats = await experiment.run_episode(max_steps=1000, render=False)
-    print(f"Total reward: {stats['total_reward']:.4f}")
-    print(f"Steps: {stats['steps']}")
-
-asyncio.run(run_episode())
-```
-
-### Manual Episode Control
-
-```python
-import asyncio
-
-async def manual_episode():
-    observation = env.reset()
+async def run_simulation():
+    # Create Runner (orchestrates simulation)
+    runner = Runner(world, agent, config)
     
-    for step in range(1000):
-        # Your agent selects an action (torques for each joint)
-        action = await agent.select_action(observation)
-        
-        # Step the environment asynchronously
-        observation, reward, done, info = await env.step(action)
-        
-        # Reward is the change in sound energy (delta)
-        print(f"Step {step}: Reward = {reward:.4f}, Sound Energy = {observation.sound_energy:.4f}")
+    # Optional: Create Renderer for visualization
+    framer = PygameFramer(
+        circle_radius=config.circle_radius,
+        link_lengths=config.link_lengths,
+        window_size=(800, 800),
+        fps=60.0
+    )
+    
+    renderer = Renderer(
+        world=world,
+        config=config,
+        render_callback=framer.render_callback,
+        fps=60.0
+    )
+    
+    # Reset and start
+    await world.reset()
+    world.start_physics()
+    runner.start()
+    renderer.start()  # Optional
+    
+    # Track statistics
+    total_reward = 0.0
+    def step_callback(state):
+        nonlocal total_reward
+        total_reward += state.reward
+        print(f"Reward: {state.reward:.4f}, Sound Energy: {state.observation.sound_energy:.4f}")
+    
+    runner.set_step_callback(step_callback)
+    
+    # Run for 10 seconds
+    await asyncio.sleep(10.0)
+    
+    # Cleanup
+    renderer.stop()
+    runner.stop()
+    world.stop_physics()
+    framer.close()
+    
+    print(f"Total reward: {total_reward:.4f}")
 
-asyncio.run(manual_episode())
+asyncio.run(run_simulation())
+```
+
+### Headless Mode (No Visualization)
+
+```python
+import asyncio
+from soundflower import World
+from experimenter import Runner, create_default_config
+from agents.heuristic_agent import HeuristicAgent
+
+async def run_headless():
+    config = create_default_config()
+    config.control_frequency = 100.0  # Higher frequency for faster execution
+    config.headless = True
+    
+    world = World(config)
+    agent = HeuristicAgent(config=config)
+    runner = Runner(world, agent, config)
+    
+    await world.reset()
+    world.start_physics()
+    runner.start()
+    
+    # Run for 10 seconds (much faster than real-time)
+    await asyncio.sleep(10.0)
+    
+    runner.stop()
+    world.stop_physics()
+    
+    final_state = world.get_state()
+    print(f"Final sound energy: {final_state.observation.sound_energy:.4f}")
+
+asyncio.run(run_headless())
 ```
 
 ### Observation Space
@@ -176,54 +234,76 @@ The included heuristic agent uses a simple PD controller to point the arm toward
 
 **Note:** The agent no longer holds a reference to the environment. The `max_torque` parameter is passed during initialization for action clamping.
 
-## Experiments Package
+## Experimenter Package
 
-The `experiments` package provides the `Experiment` class for running episodes and collecting statistics:
+The `experimenter` package provides configuration and the `Runner` class for orchestrating simulations:
 
 ```python
-from experiments import Experiment
+from experimenter import Runner, create_default_config, SoundFlowerConfig
+from soundflower import World
+from agents.heuristic_agent import HeuristicAgent
 
-experiment = Experiment(env, agent)
+# Create configuration
+config = create_default_config(sound_source_angular_velocity=0.3)
 
-# Run a simple episode
-stats = await experiment.run_episode(max_steps=1000, render=False)
+# Create world and agent
+world = World(config)
+agent = HeuristicAgent(config=config)
 
-# Run with logging
-stats = await experiment.run_episode_with_logging(max_steps=100, log_interval=20)
+# Create runner
+runner = Runner(world, agent, config)
 
-# Collect render data for visualization
-render_data = await experiment.collect_render_data(max_steps=100)
+# Set callbacks for monitoring
+def step_callback(state):
+    print(f"Step: Reward={state.reward:.4f}, Energy={state.observation.sound_energy:.4f}")
+
+runner.set_step_callback(step_callback)
+
+# Run simulation
+await world.reset()
+world.start_physics()
+runner.start()
+await asyncio.sleep(10.0)  # Run for 10 seconds
+runner.stop()
+world.stop_physics()
 ```
 
-This separation of concerns makes the code more modular and easier to test.
+The `Runner` coordinates between the `World` (simulation state) and the `Agent` (decision making), running at a configurable control frequency.
 
 ## Animation
 
-The animator package provides real-time visualization of the simulation:
+The `animator` package provides real-time visualization of the simulation:
 
-### Pygame Animator
+### Pygame Framer
 
-The Pygame animator provides smooth real-time animation with interactive controls:
+The `PygameFramer` provides smooth real-time animation with interactive controls:
 
 ```python
-from animator import PygameAnimator
-from soundflower import World, Runner, Renderer
+from animator import PygameFramer, Renderer
+from soundflower import World
+from experimenter import Runner, create_default_config
+from agents.heuristic_agent import HeuristicAgent
 
-# Create world, runner, and animator
+# Create configuration
+config = create_default_config(sound_source_angular_velocity=0.3)
+
+# Create world, runner, and framer
 world = World(config)
+agent = HeuristicAgent(config=config)
 runner = Runner(world, agent, config)
-animator = PygameAnimator(
+
+framer = PygameFramer(
     circle_radius=config.circle_radius,
     link_lengths=config.link_lengths,
     window_size=(800, 800),
     fps=60
 )
 
-# Create renderer with animator callback
+# Create renderer with framer callback
 renderer = Renderer(
     world=world,
     config=config,
-    render_callback=animator.render_callback,
+    render_callback=framer.render_callback,
     fps=60.0
 )
 
@@ -232,6 +312,16 @@ await world.reset()
 world.start_physics()
 runner.start()
 renderer.start()
+
+# Run until user quits or timeout
+while renderer.is_running:
+    await asyncio.sleep(0.1)
+
+# Cleanup
+renderer.stop()
+runner.stop()
+world.stop_physics()
+framer.close()
 ```
 
 **Features:**

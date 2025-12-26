@@ -1,5 +1,6 @@
 """Animator package for Sound Flower environment."""
 
-from .pygame_animator import PygameAnimator
+from .pygame_framer import PygameFramer
+from .renderer import Renderer
 
-__all__ = ['PygameAnimator']
+__all__ = ['PygameFramer', 'Renderer']

@@ -3,9 +3,18 @@
 import numpy as np
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
-from .physics_engine import PhysicsEngine, PhysicsState
-from .config import SoundFlowerConfig
-from .environment import Observation
+from environment.physics_engine import PhysicsEngine, PhysicsState
+
+
+@dataclass
+class Observation:
+    """Observation from the environment."""
+    arm_angles: np.ndarray  # Current joint angles
+    arm_angular_velocities: np.ndarray  # Current joint angular velocities
+    end_effector_pos: np.ndarray  # End effector position (x, y)
+    sound_energy: float  # Current sound energy at microphone
+    sound_energy_delta: float  # Change in sound energy (for reward)
+    sound_source_positions: List[np.ndarray]  # Positions of sound sources
 
 
 @dataclass
@@ -29,7 +38,7 @@ class World:
     - Reset to initial state
     """
     
-    def __init__(self, config: SoundFlowerConfig):
+    def __init__(self, config):
         """
         Initialize world.
         

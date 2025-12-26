@@ -4,8 +4,8 @@ import numpy as np
 from typing import Optional
 import asyncio
 
-from soundflower.environment import Observation
-from soundflower.config import SoundFlowerConfig
+from soundflower import Observation
+from experimenter import SoundFlowerConfig
 
 
 class HeuristicAgent:

@@ -1,4 +1,4 @@
-"""Pygame animator for the new decoupled simulation architecture."""
+"""Pygame framer for the new decoupled simulation architecture."""
 
 import pygame
 import numpy as np
@@ -6,8 +6,8 @@ import math
 from typing import Dict, Any, Optional
 
 
-class PygameAnimator:
-    """Pygame animator that works with the decoupled simulation loop."""
+class PygameFramer:
+    """Pygame framer that works with the decoupled simulation loop."""
     
     def __init__(self, circle_radius: float, link_lengths: list,
                  window_size: tuple = (800, 800), fps: float = 60.0):

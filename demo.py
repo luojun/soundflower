@@ -2,13 +2,10 @@
 
 import asyncio
 import sys
-from soundflower.world import World
-from soundflower.runner import Runner
-from soundflower.renderer import Renderer
-from soundflower.config import SoundFlowerConfig
+from soundflower import World
+from experimenter import Runner, create_default_config
+from animator import PygameFramer, Renderer
 from agents.heuristic_agent import HeuristicAgent
-from experiments import create_default_config
-from animator import PygameAnimator
 
 
 async def main(headless: bool = False):
@@ -47,12 +44,12 @@ async def main(headless: bool = False):
     # Create Runner (orchestrates simulation)
     runner = Runner(world, agent, config)
     
-    # Create Renderer and Animator (only if not headless)
+    # Create Renderer and Framer (only if not headless)
     renderer = None
-    animator = None
+    framer = None
     
     if not headless:
-        animator = PygameAnimator(
+        framer = PygameFramer(
             circle_radius=config.circle_radius,
             link_lengths=config.link_lengths,
             window_size=(800, 800),
@@ -62,7 +59,7 @@ async def main(headless: bool = False):
         renderer = Renderer(
             world=world,
             config=config,
-            render_callback=animator.render_callback,
+            render_callback=framer.render_callback,
             fps=config.visualization_fps
         )
     
@@ -118,8 +115,8 @@ async def main(headless: bool = False):
         world.stop_physics()
         await world.wait_for_physics_stop()
         
-        if animator:
-            animator.close()
+        if framer:
+            framer.close()
         
         # Print final statistics
         final_state = world.get_state()

@@ -58,3 +58,31 @@ class SoundFlowerConfig:
         self.link_masses = [max(0.01, m) for m in self.link_masses]
         self.joint_frictions = [max(0.0, f) for f in self.joint_frictions]
 
+
+def create_default_config(sound_source_angular_velocity: float = 0.2) -> SoundFlowerConfig:
+    """
+    Create default configuration for experiments.
+    
+    Args:
+        sound_source_angular_velocity: Angular velocity of sound source (rad/s)
+        
+    Returns:
+        Default SoundFlowerConfig
+    """
+    return SoundFlowerConfig(
+        num_links=2,
+        link_lengths=[0.6, 0.4],
+        link_masses=[1.0, 0.8],
+        joint_frictions=[0.1, 0.15],
+        circle_radius=1.0,
+        num_microphones=1,
+        microphone_gain=1.0,
+        num_sound_sources=1,
+        sound_source_strength=2.0,
+        sound_attenuation_coeff=1.0,
+        dt=0.01,
+        max_torque=5.0,
+        sound_source_angular_velocity=sound_source_angular_velocity,
+        sound_source_initial_angle=np.pi / 4  # Start at 45 degrees
+    )
+

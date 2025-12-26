@@ -5,7 +5,6 @@ import asyncio
 from typing import Optional, Callable
 from dataclasses import dataclass
 from .physics import ArmPhysics, ArmState, SoundPropagation
-from .config import SoundFlowerConfig
 
 
 @dataclass
@@ -20,7 +19,7 @@ class PhysicsState:
 class PhysicsEngine:
     """Asynchronous physics engine that runs independently."""
     
-    def __init__(self, config: SoundFlowerConfig):
+    def __init__(self, config):
         """
         Initialize physics engine.
         
