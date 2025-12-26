@@ -15,9 +15,9 @@ async def main(headless: bool = False):
     print("=" * 60)
     
     if headless:
-        print("\nRunning in headless mode (no animation, faster execution)...")
+        print("\nRunning in headless mode ...")
     else:
-        print("\nRunning with animation...")
+        print("\nRunning with animation ...")
         print("Controls:")
         print("  SPACE: Pause/Resume")
         print("  ESC or Q: Quit")
@@ -26,20 +26,18 @@ async def main(headless: bool = False):
     
     # Create configuration
     config = create_default_config(sound_source_angular_velocity=0.3)
-    config.control_frequency = 100.0 if headless else 50.0
-    config.visualization_fps = 60.0
     
     print("\nConfiguration:")
     print(f"  Physics time step: {config.dt}s")
     print(f"  Control frequency: {config.control_frequency} Hz")
     if not headless:
-        print(f"  Animation FPS: {config.visualization_fps}")
+        print(f"  Animation FPS: {config.animation_fps}")
     
     # Create Environment (simulation state and logic)
     environment = Environment(config)
     
     # Create Agent
-    agent = HeuristicAgent(kp=8.0, kd=1.0, config=config)
+    agent = HeuristicAgent()
     
     # Create Runner (orchestrates simulation)
     runner = Runner(environment, agent, config)
@@ -53,14 +51,14 @@ async def main(headless: bool = False):
             circle_radius=config.circle_radius,
             link_lengths=config.link_lengths,
             window_size=(800, 800),
-            fps=config.visualization_fps
+            fps=config.animation_fps
         )
         
         animator = Animator(
             environment=environment,
             config=config,
             render_callback=framer.render_callback,
-            fps=config.visualization_fps
+            fps=config.animation_fps
         )
     
     # Track statistics

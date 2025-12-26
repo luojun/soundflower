@@ -17,7 +17,7 @@ class Runner:
     Runs at configurable frequencies:
     - Physics: runs as fast as possible with configurable time step
     - Control: runs at control_frequency (10-100 Hz)
-    - Visualization: runs at visualization_fps (10-100 fps, optional)
+    - Animation: runs at animation_fps (10-100 fps, optional)
     """
     
     def __init__(self, environment: Environment, agent, config):

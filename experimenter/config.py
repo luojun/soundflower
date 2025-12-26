@@ -33,10 +33,10 @@ class SoundFlowerConfig:
     
     # Simulation frequencies
     control_frequency: float = 50.0  # Agent control frequency in Hz (10-100)
-    visualization_fps: float = 60.0  # Visualization frame rate (10-100)
+    animation_fps: float = 60.0  # Animation frame rate (10-100)
     
     # Headless mode
-    headless: bool = False  # Run without visualization (faster than real-time)
+    headless: bool = False  # Run without animation (faster than real-time)
     real_time_factor: float = 1.0  # Speed multiplier (1.0 = real-time, >1.0 = faster)
     
     # Sound source behavior

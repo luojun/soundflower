@@ -5,14 +5,12 @@ from typing import Optional
 import asyncio
 
 from environment import Observation
-from experimenter import SoundFlowerConfig
 
 
 class HeuristicAgent:
     """Simple heuristic agent that points the arm toward the sound source."""
     
-    def __init__(self, kp: float = 5.0, kd: float = 0.5, 
-                 max_torque: Optional[float] = None, config: Optional[SoundFlowerConfig] = None):
+    def __init__(self, kp: float = 5.0, kd: float = 0.5, max_torque: float = 10.0):
         """
         Initialize heuristic agent.
         
@@ -20,22 +18,10 @@ class HeuristicAgent:
             kp: Proportional gain for PD controller
             kd: Derivative gain for PD controller
             max_torque: Maximum torque that can be applied (for clamping). 
-                       If None and config is provided, uses config.max_torque.
-            config: Optional configuration object. If provided, max_torque is taken from config
-                    if max_torque is None.
         """
         self.kp = kp  # Proportional gain
         self.kd = kd  # Derivative gain
-        
-        # Determine max_torque: prefer explicit parameter, then config, then default
-        if max_torque is not None:
-            self.max_torque = max_torque
-        elif config is not None:
-            self.max_torque = config.max_torque
-        else:
-            self.max_torque = 10.0  # Default
-        
-        self.config = config
+        self.max_torque = max_torque
         
         # Target angle for the end effector (to point at sound source)
         self.target_angle = 0.0
