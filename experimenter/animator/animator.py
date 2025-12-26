@@ -2,7 +2,7 @@
 
 import asyncio
 from typing import Callable, Dict, Any, Optional
-from soundflower import World
+from environment import Environment
 
 
 class Animator:
@@ -13,19 +13,19 @@ class Animator:
     Can be attached/detached from a running simulation.
     """
     
-    def __init__(self, world: World, config,
+    def __init__(self, environment: Environment, config,
                  render_callback: Callable[[Dict[str, Any]], bool],
                  fps: float = 60.0):
         """
         Initialize animator.
         
         Args:
-            world: World instance to animate
+            environment: Environment instance to animate
             config: Configuration object
             render_callback: Function to call with render data. Should return True to continue, False to quit.
             fps: Frame rate (10-100)
         """
-        self.world = world
+        self.environment = environment
         self.config = config
         self.render_callback = render_callback
         self.fps = max(10.0, min(100.0, fps))
@@ -42,8 +42,8 @@ class Animator:
     async def _animation_loop(self):
         """Main animation loop."""
         while self.running:
-            # Get render data from world
-            render_data = self.world.get_render_data()
+            # Get render data from environment
+            render_data = self.environment.get_render_data()
             
             # Call render callback - check if it wants to quit
             result = self.render_callback(render_data)

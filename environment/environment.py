@@ -1,9 +1,9 @@
-"""World/Environment interface - represents the simulation state and logic."""
+"""Environment interface - represents the simulation state and logic."""
 
 import numpy as np
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
-from environment.physics_engine import PhysicsEngine, PhysicsState
+from .physics_engine import PhysicsEngine, PhysicsState
 
 
 @dataclass
@@ -18,8 +18,8 @@ class Observation:
 
 
 @dataclass
-class WorldState:
-    """Complete state of the world."""
+class State:
+    """Complete state of the environment."""
     physics_state: PhysicsState
     observation: Optional[Observation] = None
     reward: float = 0.0
@@ -27,11 +27,11 @@ class WorldState:
     info: Dict[str, Any] = None
 
 
-class World:
+class Environment:
     """
-    World/Environment interface.
+    Environment interface.
     
-    Represents the simulation world state and provides methods to:
+    Represents the simulation environment state and provides methods to:
     - Query current state
     - Apply actions
     - Compute observations and rewards
@@ -40,7 +40,7 @@ class World:
     
     def __init__(self, config):
         """
-        Initialize world.
+        Initialize.
         
         Args:
             config: Configuration object
@@ -52,12 +52,12 @@ class World:
         self.previous_sound_energy = 0.0
         self.step_count = 0
     
-    def get_state(self) -> WorldState:
+    def get_state(self) -> State:
         """
-        Get current world state.
+        Get current environment state.
         
         Returns:
-            Current world state
+            Current environment state
         """
         physics_state = self.physics_engine.get_state()
         observation = self._compute_observation(physics_state)
@@ -75,7 +75,7 @@ class World:
             'simulation_time': physics_state.simulation_time
         }
         
-        return WorldState(
+        return State(
             physics_state=physics_state,
             observation=observation,
             reward=reward,
@@ -85,7 +85,7 @@ class World:
     
     def apply_action(self, action: np.ndarray):
         """
-        Apply action to the world.
+        Apply action to the environment.
         
         Args:
             action: Action to apply (torques for each joint)
@@ -186,7 +186,7 @@ class World:
         }
     
     async def reset(self):
-        """Reset world to initial state."""
+        """Reset environment to initial state."""
         await self.physics_engine.reset()
         self.previous_sound_energy = 0.0
         self.step_count = 0

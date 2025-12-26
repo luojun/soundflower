@@ -25,7 +25,7 @@ class PygameFramer:
         self.window_size = window_size
         self.fps = fps
         
-        # Calculate world bounds
+        # Calculate environment bounds
         max_reach = sum(link_lengths)
         self.world_size = max(circle_radius, max_reach) * 1.2
         
@@ -61,13 +61,13 @@ class PygameFramer:
         self.current_render_data: Optional[Dict[str, Any]] = None
     
     def _world_to_screen(self, world_pos: np.ndarray) -> tuple:
-        """Convert world coordinates to screen coordinates."""
+        """Convert environment coordinates to screen coordinates."""
         screen_x = self.window_size[0] // 2 + int(world_pos[0] * self.window_size[0] / (2 * self.world_size))
         screen_y = self.window_size[1] // 2 - int(world_pos[1] * self.window_size[1] / (2 * self.world_size))
         return screen_x, screen_y
     
     def _world_to_screen_radius(self, world_radius: float) -> int:
-        """Convert world radius to screen radius."""
+        """Convert environment radius to screen radius."""
         return int(world_radius * min(self.window_size) / (2 * self.world_size))
     
     def _draw_grid(self):

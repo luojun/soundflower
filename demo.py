@@ -2,7 +2,7 @@
 
 import asyncio
 import sys
-from soundflower import World
+from environment import Environment
 from experimenter import Runner, create_default_config
 from experimenter.animator import PygameFramer, Animator
 from agents.heuristic_agent import HeuristicAgent
@@ -35,14 +35,14 @@ async def main(headless: bool = False):
     if not headless:
         print(f"  Animation FPS: {config.visualization_fps}")
     
-    # Create World (simulation state and logic)
-    world = World(config)
+    # Create Environment (simulation state and logic)
+    environment = Environment(config)
     
     # Create Agent
     agent = HeuristicAgent(kp=8.0, kd=1.0, config=config)
     
     # Create Runner (orchestrates simulation)
-    runner = Runner(world, agent, config)
+    runner = Runner(environment, agent, config)
     
     # Create Animator and Framer (only if not headless)
     animator = None
@@ -57,7 +57,7 @@ async def main(headless: bool = False):
         )
         
         animator = Animator(
-            world=world,
+            environment=environment,
             config=config,
             render_callback=framer.render_callback,
             fps=config.visualization_fps
@@ -78,11 +78,11 @@ async def main(headless: bool = False):
     
     runner.set_step_callback(step_callback)
     
-    # Reset world
-    await world.reset()
+    # Reset environment
+    await environment.reset()
     
     # Start all components
-    world.start_physics()
+    environment.start_physics()
     runner.start()
     if animator:
         animator.start()
@@ -112,14 +112,14 @@ async def main(headless: bool = False):
         runner.stop()
         await runner.wait_for_stop()
         
-        world.stop_physics()
-        await world.wait_for_physics_stop()
+        environment.stop_physics()
+        await environment.wait_for_physics_stop()
         
         if framer:
             framer.close()
         
         # Print final statistics
-        final_state = world.get_state()
+        final_state = environment.get_state()
         print("\n" + "=" * 60)
         print("Final Statistics:")
         print(f"  Simulation time: {final_state.info['simulation_time']:.2f}s")

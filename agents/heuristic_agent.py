@@ -4,7 +4,7 @@ import numpy as np
 from typing import Optional
 import asyncio
 
-from soundflower import Observation
+from environment import Observation
 from experimenter import SoundFlowerConfig
 
 

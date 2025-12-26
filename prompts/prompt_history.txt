@@ -98,5 +98,8 @@ Remove ARCHITECTURE.md, update all references to it if any.
 
 #~~
 #Did a bit of refactoring by hand to move Animator under Experimenter.
+#~
+#Refactoring by hand: renamed World into Environment and moved under environment.
+#
 
 

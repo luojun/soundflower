@@ -2,7 +2,7 @@
 
 import asyncio
 from typing import Optional, Callable, Dict, Any
-from soundflower import World
+from environment import Environment
 
 
 class Runner:
@@ -10,7 +10,7 @@ class Runner:
     Runner interface for orchestrating simulation.
     
     Coordinates between:
-    - World (simulation state)
+    - Environment (simulation state)
     - Agent (decision making)
     - Animator (visualization, optional)
     
@@ -20,16 +20,16 @@ class Runner:
     - Visualization: runs at visualization_fps (10-100 fps, optional)
     """
     
-    def __init__(self, world: World, agent, config):
+    def __init__(self, environment: Environment, agent, config):
         """
         Initialize runner.
         
         Args:
-            world: World instance
+            environment: Environment instance
             agent: Agent with async select_action method
             config: Configuration object
         """
-        self.world = world
+        self.environment = environment
         self.agent = agent
         self.config = config
         
@@ -47,8 +47,8 @@ class Runner:
     async def _control_loop(self):
         """Main control loop running at control_frequency."""
         while self.running:
-            # Get current world state
-            world_state = self.world.get_state()
+            # Get current environment state
+            world_state = self.environment.get_state()
             
             if world_state.observation is None:
                 await asyncio.sleep(self.control_period)
@@ -57,11 +57,11 @@ class Runner:
             # Agent selects action
             action = await self.agent.select_action(world_state.observation)
             
-            # Apply action to world
-            self.world.apply_action(action)
+            # Apply action to environment
+            self.environment.apply_action(action)
             
             # Get updated state (for reward, etc.)
-            updated_state = self.world.get_state()
+            updated_state = self.environment.get_state()
             
             # Call callbacks
             if self._observation_callback:
@@ -82,7 +82,7 @@ class Runner:
         """Start the runner."""
         if not self.running:
             self.running = True
-            self.world.start_physics()
+            self.environment.start_physics()
             self._control_task = asyncio.create_task(self._control_loop())
     
     def stop(self):
@@ -90,7 +90,7 @@ class Runner:
         self.running = False
         if self._control_task:
             self._control_task.cancel()
-        self.world.stop_physics()
+        self.environment.stop_physics()
     
     async def wait_for_stop(self):
         """Wait for runner to stop."""
@@ -99,7 +99,7 @@ class Runner:
                 await self._control_task
             except asyncio.CancelledError:
                 pass
-        await self.world.wait_for_physics_stop()
+        await self.environment.wait_for_physics_stop()
     
     async def run(self, duration: Optional[float] = None):
         """
@@ -162,6 +162,6 @@ class Runner:
         self._step_callback = callback
     
     async def reset(self):
-        """Reset the runner and world."""
-        await self.world.reset()
+        """Reset the runner and environment."""
+        await self.environment.reset()
 
