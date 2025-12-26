@@ -102,4 +102,6 @@ Remove ARCHITECTURE.md, update all references to it if any.
 #Refactoring by hand: renamed World into Environment and moved under environment.
 #~
 #Refactor by hand: simplify demo startup.
+#~
+#Refactor by hand: encapsulate animator initialization.
 

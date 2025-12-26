@@ -3,6 +3,7 @@
 import asyncio
 from typing import Callable, Dict, Any, Optional
 from environment import Environment
+from .pygame_framer import PygameFramer
 
 
 class Animator:
@@ -13,9 +14,7 @@ class Animator:
     Can be attached/detached from a running simulation.
     """
     
-    def __init__(self, environment: Environment, config,
-                 render_callback: Callable[[Dict[str, Any]], bool],
-                 fps: float = 60.0):
+    def __init__(self, environment: Environment, config):
         """
         Initialize animator.
         
@@ -27,9 +26,14 @@ class Animator:
         """
         self.environment = environment
         self.config = config
-        self.render_callback = render_callback
-        self.fps = max(10.0, min(100.0, fps))
+        self.fps = max(10.0, min(100.0, config.animation_fps))
         self.frame_period = 1.0 / self.fps
+        self.framer = PygameFramer(
+            circle_radius=config.circle_radius,
+            link_lengths=config.link_lengths,
+            window_size=(800, 800),
+            fps=self.fps
+        )
         
         self.running = False
         self._animation_task: Optional[asyncio.Task] = None
@@ -46,7 +50,7 @@ class Animator:
             render_data = self.environment.get_render_data()
             
             # Call render callback - check if it wants to quit
-            result = self.render_callback(render_data)
+            result = self.framer.render_callback(render_data)
             if result is False:
                 # Callback returned False, stop animation
                 self.running = False
@@ -66,6 +70,9 @@ class Animator:
         self.running = False
         if self._animation_task:
             self._animation_task.cancel()
+
+        self.framer.close()
+        
     
     async def wait_for_stop(self):
         """Wait for Animator to stop."""

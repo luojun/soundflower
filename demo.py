@@ -4,7 +4,7 @@ import asyncio
 import sys
 from environment import Environment
 from experimenter import Runner, create_default_config
-from experimenter.animator import PygameFramer, Animator
+from experimenter.animator import Animator
 from agents.heuristic_agent import HeuristicAgent
 
 
@@ -42,24 +42,10 @@ async def main(headless: bool = False):
     # Create Runner (orchestrates simulation)
     runner = Runner(environment, agent, config)
     
-    # Create Animator and Framer (only if not headless)
-    animator = None
-    framer = None
-    
+    # Create Animator (only if not headless)
+    animator = None    
     if not headless:
-        framer = PygameFramer(
-            circle_radius=config.circle_radius,
-            link_lengths=config.link_lengths,
-            window_size=(800, 800),
-            fps=config.animation_fps
-        )
-        
-        animator = Animator(
-            environment=environment,
-            config=config,
-            render_callback=framer.render_callback,
-            fps=config.animation_fps
-        )
+        animator = Animator(environment=environment, config=config)
     
     # Track statistics
     total_reward = 0.0
@@ -112,9 +98,6 @@ async def main(headless: bool = False):
         
         environment.stop_physics()
         await environment.wait_for_physics_stop()
-        
-        if framer:
-            framer.close()
         
         # Print final statistics
         final_state = environment.get_state()
