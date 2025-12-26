@@ -8,7 +8,7 @@ from soundflower.renderer import Renderer
 from soundflower.config import SoundFlowerConfig
 from agents.heuristic_agent import HeuristicAgent
 from experiments import create_default_config
-from animation import PygameAnimator
+from animator import PygameAnimator
 
 
 async def main(headless: bool = False):

@@ -52,7 +52,7 @@ soundflower/
 ├── experiments/          # Experiment runners
 │   ├── __init__.py
 │   └── experiment.py     # Experiment class for running episodes
-├── animation/           # Animation package
+├── animator/            # Animator package
 │   ├── __init__.py
 │   └── pygame_animator.py  # Pygame real-time animator
 ├── demo.py              # Demo script (supports --headless flag)
@@ -199,14 +199,14 @@ This separation of concerns makes the code more modular and easier to test.
 
 ## Animation
 
-The animation package provides real-time visualization of the simulation:
+The animator package provides real-time visualization of the simulation:
 
 ### Pygame Animator
 
 The Pygame animator provides smooth real-time animation with interactive controls:
 
 ```python
-from animation import PygameAnimator
+from animator import PygameAnimator
 from soundflower import World, Runner, Renderer
 
 # Create world, runner, and animator

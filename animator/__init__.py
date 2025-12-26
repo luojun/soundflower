@@ -1,4 +1,4 @@
-"""Animation package for Sound Flower environment."""
+"""Animator package for Sound Flower environment."""
 
 from .pygame_animator import PygameAnimator
 
