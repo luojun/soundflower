@@ -191,7 +191,7 @@ class PygameFramer:
         Callback function for visualization loop.
         
         Args:
-            render_data: Render data from renderer
+            render_data: Render data from Animator
             
         Returns:
             True if should continue, False if should quit

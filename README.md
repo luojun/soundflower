@@ -51,7 +51,7 @@ soundflower/
 │   └── runner.py        # Runner for orchestrating simulation
 ├── animator/            # Visualization package
 │   ├── __init__.py
-│   ├── renderer.py      # Renderer interface
+│   ├── animator.py      # Animator interface
 │   └── pygame_framer.py # Pygame real-time framer
 ├── agents/              # Agent implementations
 │   ├── __init__.py
@@ -122,13 +122,13 @@ agent = HeuristicAgent(kp=8.0, kd=1.0, config=config)
 ```python
 import asyncio
 from experimenter import Runner
-from animator import Renderer, PygameFramer
+from experimenter.animator import Animator, PygameFramer
 
 async def run_simulation():
     # Create Runner (orchestrates simulation)
     runner = Runner(world, agent, config)
     
-    # Optional: Create Renderer for visualization
+    # Optional: Create Animator for visualization
     framer = PygameFramer(
         circle_radius=config.circle_radius,
         link_lengths=config.link_lengths,
@@ -136,7 +136,7 @@ async def run_simulation():
         fps=60.0
     )
     
-    renderer = Renderer(
+    animator = Animator(
         world=world,
         config=config,
         render_callback=framer.render_callback,
@@ -147,7 +147,7 @@ async def run_simulation():
     await world.reset()
     world.start_physics()
     runner.start()
-    renderer.start()  # Optional
+    animator.start()  # Optional
     
     # Track statistics
     total_reward = 0.0
@@ -162,7 +162,7 @@ async def run_simulation():
     await asyncio.sleep(10.0)
     
     # Cleanup
-    renderer.stop()
+    animator.stop()
     runner.stop()
     world.stop_physics()
     framer.close()
@@ -279,9 +279,9 @@ The `animator` package provides real-time visualization of the simulation:
 The `PygameFramer` provides smooth real-time animation with interactive controls:
 
 ```python
-from animator import PygameFramer, Renderer
 from soundflower import World
 from experimenter import Runner, create_default_config
+from experimenter.animator import PygameFramer, Animator
 from agents.heuristic_agent import HeuristicAgent
 
 # Create configuration
@@ -299,8 +299,8 @@ framer = PygameFramer(
     fps=60
 )
 
-# Create renderer with framer callback
-renderer = Renderer(
+# Create Animator with framer callback
+animator = Animator(
     world=world,
     config=config,
     render_callback=framer.render_callback,
@@ -311,14 +311,14 @@ renderer = Renderer(
 await world.reset()
 world.start_physics()
 runner.start()
-renderer.start()
+animator.start()
 
 # Run until user quits or timeout
-while renderer.is_running:
+while animator.is_running:
     await asyncio.sleep(0.1)
 
 # Cleanup
-renderer.stop()
+animator.stop()
 runner.stop()
 world.stop_physics()
 framer.close()

@@ -1,13 +1,13 @@
-"""Renderer interface - handles visualization."""
+"""Animator interface - handles visualization."""
 
 import asyncio
 from typing import Callable, Dict, Any, Optional
 from soundflower import World
 
 
-class Renderer:
+class Animator:
     """
-    Renderer interface for visualization.
+    Animator interface for visualization.
     
     Decoupled from simulation logic, runs at configurable frame rate.
     Can be attached/detached from a running simulation.
@@ -17,10 +17,10 @@ class Renderer:
                  render_callback: Callable[[Dict[str, Any]], bool],
                  fps: float = 60.0):
         """
-        Initialize renderer.
+        Initialize animator.
         
         Args:
-            world: World instance to render
+            world: World instance to animate
             config: Configuration object
             render_callback: Function to call with render data. Should return True to continue, False to quit.
             fps: Frame rate (10-100)
@@ -32,15 +32,15 @@ class Renderer:
         self.frame_period = 1.0 / self.fps
         
         self.running = False
-        self._render_task: Optional[asyncio.Task] = None
+        self._animation_task: Optional[asyncio.Task] = None
     
     @property
     def is_running(self) -> bool:
-        """Check if renderer is running."""
+        """Check if Animator is running."""
         return self.running
     
-    async def _render_loop(self):
-        """Main rendering loop."""
+    async def _animation_loop(self):
+        """Main animation loop."""
         while self.running:
             # Get render data from world
             render_data = self.world.get_render_data()
@@ -48,7 +48,7 @@ class Renderer:
             # Call render callback - check if it wants to quit
             result = self.render_callback(render_data)
             if result is False:
-                # Callback returned False, stop rendering
+                # Callback returned False, stop animation
                 self.running = False
                 break
             
@@ -56,22 +56,22 @@ class Renderer:
             await asyncio.sleep(self.frame_period)
     
     def start(self):
-        """Start the renderer."""
+        """Start the animator."""
         if not self.running:
             self.running = True
-            self._render_task = asyncio.create_task(self._render_loop())
+            self._animation_task = asyncio.create_task(self._animation_loop())
     
     def stop(self):
-        """Stop the renderer."""
+        """Stop the animator."""
         self.running = False
-        if self._render_task:
-            self._render_task.cancel()
+        if self._animation_task:
+            self._animation_task.cancel()
     
     async def wait_for_stop(self):
-        """Wait for renderer to stop."""
-        if self._render_task:
+        """Wait for Animator to stop."""
+        if self._animation_task:
             try:
-                await self._render_task
+                await self._animation_task
             except asyncio.CancelledError:
                 pass
     

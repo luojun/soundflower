@@ -12,7 +12,7 @@ class Runner:
     Coordinates between:
     - World (simulation state)
     - Agent (decision making)
-    - Renderer (visualization, optional)
+    - Animator (visualization, optional)
     
     Runs at configurable frequencies:
     - Physics: runs as fast as possible with configurable time step

@@ -4,7 +4,7 @@ import asyncio
 import sys
 from soundflower import World
 from experimenter import Runner, create_default_config
-from animator import PygameFramer, Renderer
+from experimenter.animator import PygameFramer, Animator
 from agents.heuristic_agent import HeuristicAgent
 
 
@@ -44,8 +44,8 @@ async def main(headless: bool = False):
     # Create Runner (orchestrates simulation)
     runner = Runner(world, agent, config)
     
-    # Create Renderer and Framer (only if not headless)
-    renderer = None
+    # Create Animator and Framer (only if not headless)
+    animator = None
     framer = None
     
     if not headless:
@@ -56,7 +56,7 @@ async def main(headless: bool = False):
             fps=config.visualization_fps
         )
         
-        renderer = Renderer(
+        animator = Animator(
             world=world,
             config=config,
             render_callback=framer.render_callback,
@@ -84,8 +84,8 @@ async def main(headless: bool = False):
     # Start all components
     world.start_physics()
     runner.start()
-    if renderer:
-        renderer.start()
+    if animator:
+        animator.start()
     
     try:
         if headless:
@@ -96,7 +96,7 @@ async def main(headless: bool = False):
             start_time = asyncio.get_event_loop().time()
             max_duration = 30.0
             
-            while renderer.is_running:
+            while animator.is_running:
                 await asyncio.sleep(0.1)
                 elapsed = asyncio.get_event_loop().time() - start_time
                 if elapsed >= max_duration:
@@ -105,9 +105,9 @@ async def main(headless: bool = False):
         print("\nSimulation interrupted by user.")
     finally:
         # Stop all components
-        if renderer:
-            renderer.stop()
-            await renderer.wait_for_stop()
+        if animator:
+            animator.stop()
+            await animator.wait_for_stop()
         
         runner.stop()
         await runner.wait_for_stop()

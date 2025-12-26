@@ -96,3 +96,7 @@ Remove simulation_loop.py, move world.py from the environment package
 into the soundflower package, update all references in README.md if any.
 Remove ARCHITECTURE.md, update all references to it if any.
 
+#~~
+#Did a bit of refactoring by hand to move Animator under Experimenter.
+
+
