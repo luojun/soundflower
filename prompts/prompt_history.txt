@@ -68,3 +68,7 @@ including demo_visualization.py and the underlying matplotlib implementation,
 namings for the implementation, and (4) rename demo_decoupled.py to
 demo_animation.py.
 
+~~
+Why do you think we need both @demo.py and @demo_animation.py ? Can't we
+use a single demo implementation? We already have a headless mode.
+

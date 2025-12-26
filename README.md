@@ -25,16 +25,16 @@ pip install -r requirements.txt
 
 ## Quick Start
 
-Run the basic demo:
+Run the demo with animation:
 
 ```bash
 python3 demo.py
 ```
 
-Run the animation demo:
+Run the demo in headless mode (no animation, faster execution):
 
 ```bash
-python3 demo_animation.py
+python3 demo.py --headless
 ```
 
 ## Project Structure
@@ -55,8 +55,7 @@ soundflower/
 ├── animation/           # Animation package
 │   ├── __init__.py
 │   └── pygame_animator.py  # Pygame real-time animator
-├── demo.py              # Basic demo script
-├── demo_animation.py    # Animation demo
+├── demo.py              # Demo script (supports --headless flag)
 ├── requirements.txt     # Python dependencies
 └── README.md           # This file
 ```

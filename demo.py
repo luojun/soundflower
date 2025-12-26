@@ -1,52 +1,137 @@
-"""Demo script for Sound Flower environment with heuristic agent."""
+"""Demo script for Sound Flower environment with optional animation."""
 
 import asyncio
-from soundflower.environment import SoundFlowerEnvironment
+import sys
+from soundflower.world import World
+from soundflower.runner import Runner
+from soundflower.renderer import Renderer
+from soundflower.config import SoundFlowerConfig
 from agents.heuristic_agent import HeuristicAgent
-from experiments import Experiment, create_default_config
+from experiments import create_default_config
+from animation import PygameAnimator
 
 
-async def main():
-    """Run demo of Sound Flower environment."""
+async def main(headless: bool = False):
+    """Run demo with optional animation."""
     print("=" * 60)
     print("Sound Flower - Robotic Arm Sound Source Tracking Demo")
     print("=" * 60)
     
+    if headless:
+        print("\nRunning in headless mode (no animation, faster execution)...")
+    else:
+        print("\nRunning with animation...")
+        print("Controls:")
+        print("  SPACE: Pause/Resume")
+        print("  ESC or Q: Quit")
+    
+    print("=" * 60)
+    
     # Create configuration
-    config = create_default_config(sound_source_angular_velocity=0.2)
+    config = create_default_config(sound_source_angular_velocity=0.3)
+    config.control_frequency = 100.0 if headless else 50.0
+    config.visualization_fps = 60.0
     
-    # Create environment
-    env = SoundFlowerEnvironment(config)
+    print("\nConfiguration:")
+    print(f"  Physics time step: {config.dt}s")
+    print(f"  Control frequency: {config.control_frequency} Hz")
+    if not headless:
+        print(f"  Animation FPS: {config.visualization_fps}")
     
-    # Create agent (config passed for max_torque)
+    # Create World (simulation state and logic)
+    world = World(config)
+    
+    # Create Agent
     agent = HeuristicAgent(kp=8.0, kd=1.0, config=config)
     
-    # Create experiment
-    experiment = Experiment(env, agent, config)
+    # Create Runner (orchestrates simulation)
+    runner = Runner(world, agent, config)
     
-    # Print configuration
-    experiment.print_config()
+    # Create Renderer and Animator (only if not headless)
+    renderer = None
+    animator = None
     
-    print("\nRunning episode...")
-    print("-" * 60)
+    if not headless:
+        animator = PygameAnimator(
+            circle_radius=config.circle_radius,
+            link_lengths=config.link_lengths,
+            window_size=(800, 800),
+            fps=config.visualization_fps
+        )
+        
+        renderer = Renderer(
+            world=world,
+            config=config,
+            render_callback=animator.render_callback,
+            fps=config.visualization_fps
+        )
     
-    # Run episode
-    episode_stats = await experiment.run_episode(max_steps=2000, render=False)
-    experiment.print_episode_stats(episode_stats)
+    # Track statistics
+    total_reward = 0.0
+    steps = 0
     
-    # Run a shorter episode with logging to show behavior
-    print("\n" + "=" * 60)
-    print("Running episode with logging (100 steps)...")
-    print("=" * 60)
+    def step_callback(state):
+        nonlocal total_reward, steps
+        total_reward += state.reward
+        steps += 1
+        if headless and steps % 100 == 0:
+            print(f"Step {steps}: Reward={state.reward:.4f}, "
+                  f"Sound Energy={state.observation.sound_energy:.4f}, "
+                  f"Time={state.info['simulation_time']:.2f}s")
     
-    stats = await experiment.run_episode_with_logging(max_steps=100, log_interval=20)
+    runner.set_step_callback(step_callback)
     
-    print(f"\nFinal cumulative reward: {stats['total_reward']:.4f}")
-    print("\n" + "=" * 60)
-    print("Demo complete!")
-    print("=" * 60)
-    print("\nNote: For animated visualization, run: python3 demo_animation.py")
+    # Reset world
+    await world.reset()
+    
+    # Start all components
+    world.start_physics()
+    runner.start()
+    if renderer:
+        renderer.start()
+    
+    try:
+        if headless:
+            # Run for 10 seconds of simulated time
+            await asyncio.sleep(10.0)
+        else:
+            # Run until user quits or 30 seconds pass
+            start_time = asyncio.get_event_loop().time()
+            max_duration = 30.0
+            
+            while renderer.is_running:
+                await asyncio.sleep(0.1)
+                elapsed = asyncio.get_event_loop().time() - start_time
+                if elapsed >= max_duration:
+                    break
+    except KeyboardInterrupt:
+        print("\nSimulation interrupted by user.")
+    finally:
+        # Stop all components
+        if renderer:
+            renderer.stop()
+            await renderer.wait_for_stop()
+        
+        runner.stop()
+        await runner.wait_for_stop()
+        
+        world.stop_physics()
+        await world.wait_for_physics_stop()
+        
+        if animator:
+            animator.close()
+        
+        # Print final statistics
+        final_state = world.get_state()
+        print("\n" + "=" * 60)
+        print("Final Statistics:")
+        print(f"  Simulation time: {final_state.info['simulation_time']:.2f}s")
+        print(f"  Control steps: {steps}")
+        print(f"  Total reward: {total_reward:.4f}")
+        print(f"  Final sound energy: {final_state.observation.sound_energy:.4f}")
+        print("=" * 60)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    headless = len(sys.argv) > 1 and sys.argv[1] == "--headless"
+    asyncio.run(main(headless=headless))
