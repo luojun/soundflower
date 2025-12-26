@@ -1,4 +1,4 @@
-"""Demo showing the new decoupled World/Runner/Renderer architecture."""
+"""Demo showing the new decoupled World/Runner/Renderer architecture with animation."""
 
 import asyncio
 from soundflower.world import World
@@ -7,7 +7,7 @@ from soundflower.renderer import Renderer
 from soundflower.config import SoundFlowerConfig
 from agents.heuristic_agent import HeuristicAgent
 from experiments import create_default_config
-from visualization.pygame_visualizer_v2 import PygameVisualizerV2
+from animation import PygameAnimator
 
 
 async def main():
@@ -18,18 +18,18 @@ async def main():
     print("\nThis demo shows the separation of:")
     print("  - World: Simulation state and logic")
     print("  - Runner: Orchestrates simulation execution")
-    print("  - Renderer: Handles visualization (optional)")
+    print("  - Renderer: Handles animation (optional)")
     print("=" * 60)
     
     # Create configuration
     config = create_default_config(sound_source_angular_velocity=0.3)
     config.control_frequency = 50.0  # 50 Hz control
-    config.visualization_fps = 60.0  # 60 fps visualization
+    config.visualization_fps = 60.0  # 60 fps animation
     
     print("\nConfiguration:")
     print(f"  Physics time step: {config.dt}s")
     print(f"  Control frequency: {config.control_frequency} Hz")
-    print(f"  Visualization FPS: {config.visualization_fps}")
+    print(f"  Animation FPS: {config.visualization_fps}")
     
     # Create World (simulation state and logic)
     world = World(config)
@@ -40,8 +40,8 @@ async def main():
     # Create Runner (orchestrates simulation)
     runner = Runner(world, agent, config)
     
-    # Create Renderer (visualization)
-    visualizer = PygameVisualizerV2(
+    # Create Renderer (animation)
+    animator = PygameAnimator(
         circle_radius=config.circle_radius,
         link_lengths=config.link_lengths,
         window_size=(800, 800),
@@ -51,7 +51,7 @@ async def main():
     renderer = Renderer(
         world=world,
         config=config,
-        render_callback=visualizer.render_callback,
+        render_callback=animator.render_callback,
         fps=config.visualization_fps
     )
     
@@ -96,7 +96,7 @@ async def main():
         world.stop_physics()
         await world.wait_for_physics_stop()
         
-        visualizer.close()
+        animator.close()
         
         # Print final statistics
         final_state = world.get_state()
@@ -109,11 +109,11 @@ async def main():
 
 
 async def headless_demo():
-    """Run headless (no visualization) - can run faster than real-time."""
+    """Run headless (no animation) - can run faster than real-time."""
     print("=" * 60)
     print("Sound Flower - Headless Mode Demo")
     print("=" * 60)
-    print("\nRunning without visualization for faster execution...")
+    print("\nRunning without animation for faster execution...")
     
     config = create_default_config()
     config.control_frequency = 100.0  # Higher control frequency for headless

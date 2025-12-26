@@ -60,3 +60,11 @@ Can you study this repo: https://github.com/luojun/OmegaZero/tree/master ?
 To see whether there's anything to borrow from there? Maybe look into the
 Runner, Renderer, and World (Environment) differentiation and interfadces? 
 
+~~
+Please (1) remove the version of visualization that uses matplotlib,
+including demo_visualization.py and the underlying matplotlib implementation,
+(2) remove demo_pygame.py along with the old pygame_visualizer.py,
+(3) renaming the visulazation package to animation and change corresponding
+namings for the implementation, and (4) rename demo_decoupled.py to
+demo_animation.py.
+

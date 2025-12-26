@@ -15,7 +15,7 @@ Sound Flower is a 2D robotic arm reinforcement learning environment where an age
 - **Asynchronous interface**: Unlike OpenAI Gym's synchronous interface, this environment uses async/await for more flexible agent-environment interaction
 - **Configurable parameters**: Extensive configuration options for arm dynamics, sound sources, and environment properties
 - **Heuristic agent**: Included simple heuristic agent for demonstration
-- **Visualization**: Comprehensive visualization package with static plots and real-time animations
+- **Animation**: Real-time animation package for visualizing simulation
 
 ## Installation
 
@@ -31,16 +31,10 @@ Run the basic demo:
 python3 demo.py
 ```
 
-Run the matplotlib visualization demo:
+Run the animation demo:
 
 ```bash
-python3 demo_visualization.py
-```
-
-Run the Pygame real-time animation demo (recommended for dynamic visualization):
-
-```bash
-python3 demo_pygame.py
+python3 demo_animation.py
 ```
 
 ## Project Structure
@@ -58,13 +52,11 @@ soundflower/
 ├── experiments/          # Experiment runners
 │   ├── __init__.py
 │   └── experiment.py     # Experiment class for running episodes
-├── visualization/        # Visualization package
+├── animation/           # Animation package
 │   ├── __init__.py
-│   ├── visualizer.py     # Matplotlib visualization tools
-│   └── pygame_visualizer.py  # Pygame real-time animation
+│   └── pygame_animator.py  # Pygame real-time animator
 ├── demo.py              # Basic demo script
-├── demo_visualization.py # Matplotlib visualization demo
-├── demo_pygame.py        # Pygame real-time animation demo
+├── demo_animation.py    # Animation demo
 ├── requirements.txt     # Python dependencies
 └── README.md           # This file
 ```
@@ -206,26 +198,41 @@ render_data = await experiment.collect_render_data(max_steps=100)
 
 This separation of concerns makes the code more modular and easier to test.
 
-## Visualization
+## Animation
 
-The visualization package provides multiple ways to visualize the environment:
+The animation package provides real-time visualization of the simulation:
 
-### Pygame Real-time Animation (Recommended)
+### Pygame Animator
 
-The Pygame visualizer provides smooth real-time animation with interactive controls:
+The Pygame animator provides smooth real-time animation with interactive controls:
 
 ```python
-from visualization import PygameVisualizer
+from animation import PygameAnimator
+from soundflower import World, Runner, Renderer
 
-visualizer = PygameVisualizer(
+# Create world, runner, and animator
+world = World(config)
+runner = Runner(world, agent, config)
+animator = PygameAnimator(
     circle_radius=config.circle_radius,
     link_lengths=config.link_lengths,
     window_size=(800, 800),
     fps=60
 )
 
-# Animate in real-time
-await visualizer.animate(env, agent, max_steps=10000, steps_per_frame=1)
+# Create renderer with animator callback
+renderer = Renderer(
+    world=world,
+    config=config,
+    render_callback=animator.render_callback,
+    fps=60.0
+)
+
+# Run simulation
+await world.reset()
+world.start_physics()
+runner.start()
+renderer.start()
 ```
 
 **Features:**
@@ -234,31 +241,9 @@ await visualizer.animate(env, agent, max_steps=10000, steps_per_frame=1)
 - Interactive controls (SPACE to pause, ESC/Q to quit)
 - Real-time display of step count, sound energy, and positions
 - Shows arm motion, sound source motion, and dynamic updates
+- Decoupled from simulation - can run at different frame rates
 
-### Matplotlib Visualization
-
-For static plots and recorded animations:
-
-```python
-from visualization import SoundFlowerVisualizer
-
-visualizer = SoundFlowerVisualizer(
-    circle_radius=config.circle_radius,
-    link_lengths=config.link_lengths
-)
-
-# Static plot
-render_data = env.render()
-visualizer.plot_state(render_data, observation=observation, show=True)
-
-# Real-time animation (matplotlib)
-await visualizer.animate_async(env, agent, max_steps=200, update_interval=0.05)
-
-# Create animation from data
-anim = visualizer.create_animation(render_data_sequence, interval=50)
-```
-
-**Visualization Elements:**
+**Animation Elements:**
 - The circular environment boundary
 - The robotic arm (links and joints)
 - The end effector with microphone

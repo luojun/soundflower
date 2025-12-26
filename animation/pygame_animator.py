@@ -1,26 +1,24 @@
-"""Pygame-based real-time visualizer for Sound Flower environment."""
+"""Pygame animator for the new decoupled simulation architecture."""
 
 import pygame
 import numpy as np
-from typing import Dict, List, Optional, Any, Tuple
-import asyncio
 import math
+from typing import Dict, Any, Optional
 
 
-class PygameVisualizer:
-    """Real-time Pygame visualizer for the Sound Flower environment."""
+class PygameAnimator:
+    """Pygame animator that works with the decoupled simulation loop."""
     
-    def __init__(self, circle_radius: float, link_lengths: List[float],
-                 window_size: Tuple[int, int] = (800, 800),
-                 fps: int = 60):
+    def __init__(self, circle_radius: float, link_lengths: list,
+                 window_size: tuple = (800, 800), fps: float = 60.0):
         """
-        Initialize Pygame visualizer.
+        Initialize visualizer.
         
         Args:
             circle_radius: Radius of the environment circle
             link_lengths: Lengths of arm links
             window_size: Window size (width, height)
-            fps: Target frames per second
+            fps: Target frame rate
         """
         self.circle_radius = circle_radius
         self.link_lengths = link_lengths
@@ -55,22 +53,17 @@ class PygameVisualizer:
         self.small_font = pygame.font.Font(None, 18)
         
         # Animation state
-        self.running = False
+        self.running = True  # Start as running
         self.paused = False
+        self.wave_phase = 0.0
         
-    def _world_to_screen(self, world_pos: np.ndarray) -> Tuple[int, int]:
-        """
-        Convert world coordinates to screen coordinates.
-        
-        Args:
-            world_pos: World position (x, y)
-            
-        Returns:
-            Screen position (x, y)
-        """
-        # Center of screen is origin
+        # Current render data
+        self.current_render_data: Optional[Dict[str, Any]] = None
+    
+    def _world_to_screen(self, world_pos: np.ndarray) -> tuple:
+        """Convert world coordinates to screen coordinates."""
         screen_x = self.window_size[0] // 2 + int(world_pos[0] * self.window_size[0] / (2 * self.world_size))
-        screen_y = self.window_size[1] // 2 - int(world_pos[1] * self.window_size[1] / (2 * self.world_size))  # Flip Y
+        screen_y = self.window_size[1] // 2 - int(world_pos[1] * self.window_size[1] / (2 * self.world_size))
         return screen_x, screen_y
     
     def _world_to_screen_radius(self, world_radius: float) -> int:
@@ -104,13 +97,7 @@ class PygameVisualizer:
         pygame.draw.circle(self.screen, self.colors['circle'], center, radius, 2)
     
     def _draw_arm(self, joint_positions: np.ndarray, end_effector_pos: np.ndarray):
-        """
-        Draw the robotic arm.
-        
-        Args:
-            joint_positions: Array of joint positions
-            end_effector_pos: End effector position
-        """
+        """Draw the robotic arm."""
         # Draw links
         for i in range(len(joint_positions) - 1):
             start = self._world_to_screen(joint_positions[i])
@@ -127,29 +114,20 @@ class PygameVisualizer:
         for i, joint_pos in enumerate(joint_positions):
             screen_pos = self._world_to_screen(joint_pos)
             if i == 0:
-                # Base joint (larger)
                 pygame.draw.circle(self.screen, self.colors['joint'], screen_pos, 8)
             else:
                 pygame.draw.circle(self.screen, self.colors['joint'], screen_pos, 6)
         
-        # Draw end effector (microphone)
+        # Draw end effector
         screen_pos = self._world_to_screen(end_effector_pos)
         pygame.draw.circle(self.screen, self.colors['end_effector'], screen_pos, 10)
         pygame.draw.circle(self.screen, (255, 255, 255), screen_pos, 10, 2)
     
-    def _draw_sound_source(self, source_pos: np.ndarray, strength: float = 1.0, 
-                          wave_phase: float = 0.0):
-        """
-        Draw a sound source with animated waves.
-        
-        Args:
-            source_pos: Sound source position
-            strength: Sound source strength (affects wave size)
-            wave_phase: Phase for wave animation (0-2π)
-        """
+    def _draw_sound_source(self, source_pos: np.ndarray, wave_phase: float):
+        """Draw a sound source with animated waves."""
         screen_pos = self._world_to_screen(source_pos)
         
-        # Draw sound waves (animated concentric circles)
+        # Draw sound waves
         num_waves = 3
         for i in range(num_waves):
             wave_radius = 15 + 10 * i + 5 * math.sin(wave_phase + i * math.pi / 2)
@@ -161,7 +139,7 @@ class PygameVisualizer:
         pygame.draw.circle(self.screen, self.colors['sound_source'], screen_pos, 8)
         pygame.draw.circle(self.screen, (255, 255, 255), screen_pos, 8, 2)
     
-    def _draw_text(self, text: str, pos: Tuple[int, int], font=None, color=None):
+    def _draw_text(self, text: str, pos: tuple, font=None, color=None):
         """Draw text on screen."""
         if font is None:
             font = self.font
@@ -170,14 +148,27 @@ class PygameVisualizer:
         text_surface = font.render(text, True, color)
         self.screen.blit(text_surface, pos)
     
-    def _draw_info_panel(self, step: int, sound_energy: float, 
-                        end_effector_pos: np.ndarray,
-                        distance_to_source: float):
+    def _draw_info_panel(self, render_data: Dict[str, Any]):
         """Draw information panel."""
         y_offset = 10
         x_offset = 10
         
-        self._draw_text(f"Step: {step}", (x_offset, y_offset))
+        step_count = render_data.get('step_count', 0)
+        sound_energy = render_data.get('sound_energy', 0.0)
+        end_effector_pos = render_data.get('end_effector_pos', np.array([0, 0]))
+        simulation_time = render_data.get('simulation_time', 0.0)
+        
+        # Calculate distance to nearest source
+        sound_source_positions = render_data.get('sound_source_positions', [])
+        if sound_source_positions:
+            distances = [np.linalg.norm(end_effector_pos - sp) for sp in sound_source_positions]
+            distance_to_source = min(distances)
+        else:
+            distance_to_source = float('inf')
+        
+        self._draw_text(f"Step: {step_count}", (x_offset, y_offset))
+        y_offset += 25
+        self._draw_text(f"Time: {simulation_time:.2f}s", (x_offset, y_offset))
         y_offset += 25
         self._draw_text(f"Sound Energy: {sound_energy:.4f}", (x_offset, y_offset))
         y_offset += 25
@@ -195,16 +186,35 @@ class PygameVisualizer:
         y_offset += 18
         self._draw_text("ESC/Q: Quit", (x_offset, y_offset), self.small_font, (150, 150, 150))
     
-    def render_frame(self, render_data: Dict[str, Any], step: int = 0,
-                    wave_phase: float = 0.0):
+    def render_callback(self, render_data: Dict[str, Any]) -> bool:
         """
-        Render a single frame.
+        Callback function for visualization loop.
         
         Args:
-            render_data: Data from env.render()
-            step: Current step number
-            wave_phase: Phase for wave animation
+            render_data: Render data from renderer
+            
+        Returns:
+            True if should continue, False if should quit
         """
+        # Update wave phase
+        self.wave_phase += 0.1
+        if self.wave_phase > 2 * math.pi:
+            self.wave_phase -= 2 * math.pi
+        
+        # Store render data
+        self.current_render_data = render_data
+        
+        # Handle events
+        if not self.handle_events():
+            self.running = False
+            return False
+        
+        # Skip rendering if paused
+        if self.paused:
+            pygame.display.flip()
+            self.clock.tick(self.fps)
+            return True
+        
         # Clear screen
         self.screen.fill(self.colors['background'])
         
@@ -220,27 +230,21 @@ class PygameVisualizer:
         self._draw_arm(joint_positions, end_effector_pos)
         
         # Draw sound sources
-        sound_source_positions = render_data['sound_source_positions']
-        sound_energy = render_data.get('sound_energy', 0.0)
-        
-        # Calculate distance to nearest source for info panel
-        if sound_source_positions:
-            distances = [np.linalg.norm(end_effector_pos - sp) for sp in sound_source_positions]
-            distance_to_source = min(distances)
-        else:
-            distance_to_source = float('inf')
-        
+        sound_source_positions = render_data.get('sound_source_positions', [])
         for source_pos in sound_source_positions:
-            self._draw_sound_source(source_pos, strength=1.0, wave_phase=wave_phase)
+            self._draw_sound_source(source_pos, self.wave_phase)
         
         # Draw info panel
-        self._draw_info_panel(step, sound_energy, end_effector_pos, distance_to_source)
+        self._draw_info_panel(render_data)
         
         # Update display
         pygame.display.flip()
+        self.clock.tick(self.fps)
+        
+        return True
     
-    def handle_events(self):
-        """Handle pygame events. Returns True if should continue, False if should quit."""
+    def handle_events(self) -> bool:
+        """Handle pygame events. Returns True if should continue."""
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return False
@@ -250,56 +254,6 @@ class PygameVisualizer:
                 elif event.key == pygame.K_SPACE:
                     self.paused = not self.paused
         return True
-    
-    async def animate(self, env, agent, max_steps: int = 10000,
-                     steps_per_frame: int = 1):
-        """
-        Animate the environment in real-time.
-        
-        Args:
-            env: SoundFlowerEnvironment instance
-            agent: Agent instance
-            max_steps: Maximum number of steps
-            steps_per_frame: Number of simulation steps per frame
-        """
-        self.running = True
-        self.paused = False
-        
-        observation = env.reset()
-        step = 0
-        wave_phase = 0.0
-        
-        while self.running and step < max_steps:
-            # Handle events
-            if not self.handle_events():
-                break
-            
-            # Update wave animation phase
-            wave_phase += 0.1
-            if wave_phase > 2 * math.pi:
-                wave_phase -= 2 * math.pi
-            
-            # Step environment if not paused
-            if not self.paused:
-                for _ in range(steps_per_frame):
-                    action = await agent.select_action(observation)
-                    observation, reward, done, info = await env.step(action)
-                    step += 1
-                    
-                    if done:
-                        break
-            
-            # Render frame
-            render_data = env.render()
-            self.render_frame(render_data, step=step, wave_phase=wave_phase)
-            
-            # Control frame rate
-            self.clock.tick(self.fps)
-            
-            # Small async delay to allow other tasks
-            await asyncio.sleep(0.001)
-        
-        self.running = False
     
     def close(self):
         """Close the visualizer."""
