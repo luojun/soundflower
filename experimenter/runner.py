@@ -3,6 +3,7 @@
 import asyncio
 from typing import Optional, Callable, Dict, Any
 from environment import Environment
+from experimenter.animator import Animator
 
 
 class Runner:
@@ -20,7 +21,7 @@ class Runner:
     - Animation: runs at animation_fps (10-100 fps, optional)
     """
     
-    def __init__(self, environment: Environment, agent, config):
+    def __init__(self, config, environment: Environment, agent, animator: Optional[Animator] = None):
         """
         Initialize runner.
         
@@ -31,6 +32,7 @@ class Runner:
         """
         self.environment = environment
         self.agent = agent
+        self.animator = animator
         self.config = config
         
         # Control loop state
@@ -78,11 +80,15 @@ class Runner:
             # Wait for next control cycle
             await asyncio.sleep(self.control_period)
     
-    def start(self):
+    async def start(self):
         """Start the runner."""
+        await self.environment.reset()
+
         if not self.running:
             self.running = True
             self.environment.start_physics()
+            if self.animator:
+                self.animator.start()
             self._control_task = asyncio.create_task(self._control_loop())
     
     def stop(self):
@@ -90,8 +96,11 @@ class Runner:
         self.running = False
         if self._control_task:
             self._control_task.cancel()
+        if self.animator:
+            self.animator.stop()
         self.environment.stop_physics()
-    
+
+
     async def wait_for_stop(self):
         """Wait for runner to stop."""
         if self._control_task:
@@ -100,7 +109,9 @@ class Runner:
             except asyncio.CancelledError:
                 pass
         await self.environment.wait_for_physics_stop()
-    
+        if self.animator:
+            await self.animator.wait_for_stop()
+
     async def run(self, duration: Optional[float] = None):
         """
         Run simulation for specified duration.

@@ -33,20 +33,17 @@ async def main(headless: bool = False):
     if not headless:
         print(f"  Animation FPS: {config.animation_fps}")
     
-    # Create Environment (simulation state and logic)
     environment = Environment(config)
-    
-    # Create Agent
     agent = HeuristicAgent()
-    
-    # Create Runner (orchestrates simulation)
-    runner = Runner(environment, agent, config)
     
     # Create Animator (only if not headless)
     animator = None    
     if not headless:
         animator = Animator(environment=environment, config=config)
     
+    # Create Runner (orchestrates simulation)
+    runner = Runner(config, environment, agent, animator)
+
     # Track statistics
     total_reward = 0.0
     steps = 0
@@ -62,14 +59,8 @@ async def main(headless: bool = False):
     
     runner.set_step_callback(step_callback)
     
-    # Reset environment
-    await environment.reset()
-    
     # Start all components
-    environment.start_physics()
-    runner.start()
-    if animator:
-        animator.start()
+    await runner.start()
     
     try:
         if headless:
@@ -88,16 +79,8 @@ async def main(headless: bool = False):
     except KeyboardInterrupt:
         print("\nSimulation interrupted by user.")
     finally:
-        # Stop all components
-        if animator:
-            animator.stop()
-            await animator.wait_for_stop()
-        
         runner.stop()
         await runner.wait_for_stop()
-        
-        environment.stop_physics()
-        await environment.wait_for_physics_stop()
         
         # Print final statistics
         final_state = environment.get_state()

@@ -104,4 +104,6 @@ Remove ARCHITECTURE.md, update all references to it if any.
 #Refactor by hand: simplify demo startup.
 #~
 #Refactor by hand: encapsulate animator initialization.
+#~
+#Refactor by hand: move experiment orchestration into runner.
 
