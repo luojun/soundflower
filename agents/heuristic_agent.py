@@ -85,7 +85,7 @@ class HeuristicAgent:
         
         return desired_angles
     
-    async def select_action(self, observation: Observation) -> np.ndarray:
+    def select_action(self, observation: Observation) -> np.ndarray:
         """
         Select action using heuristic control.
         

@@ -1,8 +1,7 @@
 """Asynchronous physics engine for Sound Flower."""
 
 import numpy as np
-import asyncio
-from typing import Optional, Callable
+from typing import Optional
 from dataclasses import dataclass
 from .physics import ArmPhysics, ArmState, SoundPropagation
 
@@ -58,13 +57,7 @@ class PhysicsEngine:
         
         # Running state
         self.running = False
-        self._task: Optional[asyncio.Task] = None
         
-        # Lock for thread-safe state access
-        self._lock = asyncio.Lock()
-        
-        # Callback for state updates (optional)
-        self._state_callback: Optional[Callable] = None
     
     def _initialize_sound_sources(self):
         """Initialize sound sources."""
@@ -91,75 +84,16 @@ class PhysicsEngine:
         """
         return self.state
     
-    async def _physics_loop(self):
-        """Main physics simulation loop."""
-        while self.running:
-            async with self._lock:
-                # Update sound sources
-                if self.config.sound_source_angular_velocity != 0.0:
-                    for i in range(len(self.state.sound_source_angles)):
-                        self.state.sound_source_angles[i] += (
-                            self.config.sound_source_angular_velocity * self.config.dt
-                        )
-                
-                # Step physics
-                self.state.arm_state = self.arm_physics.step(
-                    self.state.arm_state, 
-                    self.current_torques
+    def step(self):
+        # Update sound sources
+        if self.config.sound_source_angular_velocity != 0.0:
+            for i in range(len(self.state.sound_source_angles)):
+                self.state.sound_source_angles[i] += (
+                    self.config.sound_source_angular_velocity * self.config.dt
                 )
-                
-                # Update simulation time
-                self.state.simulation_time += self.config.dt
-                self.state.step_count += 1
-                
-                # Call state callback if set
-                if self._state_callback:
-                    self._state_callback(self.state)
-            
-            # Yield to other tasks (physics runs as fast as possible)
-            await asyncio.sleep(0)  # Yield control
-    
-    def start(self):
-        """Start the physics engine."""
-        if not self.running:
-            self.running = True
-            self._task = asyncio.create_task(self._physics_loop())
-    
-    def stop(self):
-        """Stop the physics engine."""
-        self.running = False
-        if self._task:
-            self._task.cancel()
-    
-    async def wait_for_stop(self):
-        """Wait for physics engine to stop."""
-        if self._task:
-            try:
-                await self._task
-            except asyncio.CancelledError:
-                pass
-    
-    async def reset(self):
-        """Reset physics state."""
-        async with self._lock:
-            self.state = PhysicsState(
-                arm_state=ArmState(
-                    angles=np.zeros(self.config.num_links),
-                    angular_velocities=np.zeros(self.config.num_links)
-                ),
-                sound_source_angles=[],
-                simulation_time=0.0,
-                step_count=0
-            )
-            self._initialize_sound_sources()
-            self.current_torques = np.zeros(self.config.num_links)
-    
-    def set_state_callback(self, callback: Callable[[PhysicsState], None]):
-        """
-        Set callback for state updates.
         
-        Args:
-            callback: Function to call on each physics step
-        """
-        self._state_callback = callback
-
+        # Step physics
+        self.state.arm_state = self.arm_physics.step(
+            self.state.arm_state,
+            self.current_torques
+        )

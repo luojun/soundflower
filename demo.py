@@ -1,14 +1,15 @@
 """Demo script for Sound Flower environment with optional animation."""
 
-import asyncio
-import sys
+import sys, time
+import pygame
 from environment import Environment
-from experimenter import Runner, create_default_config
-from experimenter.animator import Animator
 from agents.heuristic_agent import HeuristicAgent
+from experimenter import create_default_config, Logger
+from experimenter.animator import Animator
+from soundflower import SoundFlower
 
 
-async def main(headless: bool = False):
+def main(headless: bool = False):
     """Run demo with optional animation."""
     print("=" * 60)
     print("Sound Flower - Robotic Arm Sound Source Tracking Demo")
@@ -24,75 +25,41 @@ async def main(headless: bool = False):
     
     print("=" * 60)
     
-    # Create configuration
     config = create_default_config(sound_source_angular_velocity=0.3)
-    
-    print("\nConfiguration:")
-    print(f"  Physics time step: {config.dt}s")
-    print(f"  Control frequency: {config.control_frequency} Hz")
-    if not headless:
-        print(f"  Animation FPS: {config.animation_fps}")
-    
     environment = Environment(config)
     agent = HeuristicAgent()
-    
-    # Create Animator (only if not headless)
-    animator = None    
+    logger = Logger()
+    animator = None
     if not headless:
-        animator = Animator(environment=environment, config=config)
-    
-    # Create Runner (orchestrates simulation)
-    runner = Runner(config, environment, agent, animator)
+        animator = Animator(config=config)
 
-    # Track statistics
-    total_reward = 0.0
-    steps = 0
-    
-    def step_callback(state):
-        nonlocal total_reward, steps
-        total_reward += state.reward
-        steps += 1
-        if headless and steps % 100 == 0:
-            print(f"Step {steps}: Reward={state.reward:.4f}, "
-                  f"Sound Energy={state.observation.sound_energy:.4f}, "
-                  f"Time={state.info['simulation_time']:.2f}s")
-    
-    runner.set_step_callback(step_callback)
-    
-    # Start all components
-    await runner.start()
-    
+    soundflower = SoundFlower(config, environment, agent, logger=logger, animator=animator)
+
+    soundflower.start()
+    paused = False
+
     try:
-        if headless:
-            # Run for 10 seconds of simulated time
-            await asyncio.sleep(10.0)
-        else:
-            # Run until user quits or 30 seconds pass
-            start_time = asyncio.get_event_loop().time()
-            max_duration = 30.0
+        while True:
+            if animator and pygame.get_init():
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        break
+                    elif event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_SPACE:
+                            paused = not paused
+                        elif event.key in (pygame.K_ESCAPE, pygame.K_q):
+                            break
             
-            while animator.is_running:
-                await asyncio.sleep(0.1)
-                elapsed = asyncio.get_event_loop().time() - start_time
-                if elapsed >= max_duration:
-                    break
+            if paused:
+                time.sleep(0.01)
+            else:
+                soundflower.step()
     except KeyboardInterrupt:
         print("\nSimulation interrupted by user.")
     finally:
-        runner.stop()
-        await runner.wait_for_stop()
-        
-        # Print final statistics
-        final_state = environment.get_state()
-        print("\n" + "=" * 60)
-        print("Final Statistics:")
-        print(f"  Simulation time: {final_state.info['simulation_time']:.2f}s")
-        print(f"  Control steps: {steps}")
-        print(f"  Total reward: {total_reward:.4f}")
-        print(f"  Final sound energy: {final_state.observation.sound_energy:.4f}")
-        print("=" * 60)
+        soundflower.finish()
 
 
 if __name__ == "__main__":
     headless = len(sys.argv) > 1 and sys.argv[1] == "--headless"
-    asyncio.run(main(headless=headless))
+    main(headless=headless)

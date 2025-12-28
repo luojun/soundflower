@@ -52,6 +52,9 @@ class Environment:
         self.previous_sound_energy = 0.0
         self.step_count = 0
     
+    def step(self):
+        self.physics_engine.step()
+
     def get_state(self) -> State:
         """
         Get current environment state.
@@ -95,8 +98,7 @@ class Environment:
         
         # Apply to physics engine
         self.physics_engine.set_torques(action)
-        
-        self.step_count += 1
+
     
     def _compute_observation(self, physics_state: PhysicsState) -> Observation:
         """Compute observation from physics state."""
@@ -184,22 +186,4 @@ class Environment:
             'simulation_time': physics_state.simulation_time,
             'step_count': physics_state.step_count
         }
-    
-    async def reset(self):
-        """Reset environment to initial state."""
-        await self.physics_engine.reset()
-        self.previous_sound_energy = 0.0
-        self.step_count = 0
-    
-    def start_physics(self):
-        """Start physics engine."""
-        self.physics_engine.start()
-    
-    def stop_physics(self):
-        """Stop physics engine."""
-        self.physics_engine.stop()
-    
-    async def wait_for_physics_stop(self):
-        """Wait for physics engine to stop."""
-        await self.physics_engine.wait_for_stop()
 

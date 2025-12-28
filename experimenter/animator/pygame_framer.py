@@ -10,7 +10,7 @@ class PygameFramer:
     """Pygame framer that works with the decoupled simulation loop."""
     
     def __init__(self, circle_radius: float, link_lengths: list,
-                 window_size: tuple = (800, 800), fps: float = 60.0):
+                 window_size: tuple = (800, 800)):
         """
         Initialize visualizer.
         
@@ -18,23 +18,15 @@ class PygameFramer:
             circle_radius: Radius of the environment circle
             link_lengths: Lengths of arm links
             window_size: Window size (width, height)
-            fps: Target frame rate
         """
         self.circle_radius = circle_radius
         self.link_lengths = link_lengths
         self.window_size = window_size
-        self.fps = fps
         
         # Calculate environment bounds
         max_reach = sum(link_lengths)
         self.world_size = max(circle_radius, max_reach) * 1.2
-        
-        # Initialize Pygame
-        pygame.init()
-        self.screen = pygame.display.set_mode(window_size)
-        pygame.display.set_caption("Sound Flower - Real-time Animation")
-        self.clock = pygame.time.Clock()
-        
+
         # Colors
         self.colors = {
             'background': (20, 20, 30),
@@ -47,10 +39,6 @@ class PygameFramer:
             'text': (255, 255, 255),
             'grid': (40, 40, 50)
         }
-        
-        # Font
-        self.font = pygame.font.Font(None, 24)
-        self.small_font = pygame.font.Font(None, 18)
         
         # Animation state
         self.running = True  # Start as running
@@ -186,7 +174,7 @@ class PygameFramer:
         y_offset += 18
         self._draw_text("ESC/Q: Quit", (x_offset, y_offset), self.small_font, (150, 150, 150))
     
-    def render_callback(self, render_data: Dict[str, Any]) -> bool:
+    def render_frame(self, render_data: Dict[str, Any]) -> bool:
         """
         Callback function for visualization loop.
         
@@ -204,15 +192,9 @@ class PygameFramer:
         # Store render data
         self.current_render_data = render_data
         
-        # Handle events
-        if not self.handle_events():
-            self.running = False
-            return False
-        
         # Skip rendering if paused
         if self.paused:
             pygame.display.flip()
-            self.clock.tick(self.fps)
             return True
         
         # Clear screen
@@ -239,23 +221,17 @@ class PygameFramer:
         
         # Update display
         pygame.display.flip()
-        self.clock.tick(self.fps)
-        
-        return True
     
-    def handle_events(self) -> bool:
-        """Handle pygame events. Returns True if should continue."""
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return False
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE or event.key == pygame.K_q:
-                    return False
-                elif event.key == pygame.K_SPACE:
-                    self.paused = not self.paused
-        return True
-    
-    def close(self):
+    def start(self):
+        # Initialize Pygame
+        pygame.init()
+        self.screen = pygame.display.set_mode(self.window_size)
+        pygame.display.set_caption("Sound Flower - Real-time Animation")
+        # Font
+        self.font = pygame.font.Font(None, 24)
+        self.small_font = pygame.font.Font(None, 18)
+
+    def finish(self):
         """Close the visualizer."""
         pygame.quit()
 
