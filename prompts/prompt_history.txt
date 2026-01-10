@@ -141,3 +141,11 @@ and include the simulation_time at that step as well as the step_count.
 7. Remove simulation_time and step_count from @physics_engine.py and make sure that only
 @soundflower.py tracks these.
 
+~
+Update the code to
+1. Remove the Info part from get_state in @environment.py;
+2. Make per step logging report reward rather than energy delta;
+3. Use appropriate units for energy;
+4. Make sure logging of float values use only two digits after the decimal point;
+5. Remove _compute_distance_to_nearest_source and _compute_orientation_factors.
+

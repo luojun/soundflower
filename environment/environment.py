@@ -69,22 +69,12 @@ class Environment:
         # Compute reward
         reward = observation.sound_energy_delta
 
-        # Compute info
-        info = {
-            'total_sound_intensity': observation.sound_intensity,
-            'total_sound_energy': observation.sound_energy,
-            'end_effector_distance_to_source': self._compute_distance_to_nearest_source(
-                observation.end_effector_pos,
-                np.array(observation.sound_source_positions) if observation.sound_source_positions else np.array([]).reshape(0, 2)
-            )
-        }
-
         return State(
             physics_state=physics_state,
             observation=observation,
             reward=reward,
             done=False,  # Infinite horizon
-            info=info
+            info=None
         )
 
     def apply_action(self, action: np.ndarray):
@@ -170,56 +160,6 @@ class Environment:
             sound_source_positions=sound_source_positions_list,
             microphone_orientation=microphone_orientation
         )
-
-    def _compute_orientation_factors(self, microphone_orientation: float,
-                                     end_effector_pos: np.ndarray,
-                                     source_positions: np.ndarray) -> np.ndarray:
-        """
-        Compute orientation factors for microphone based on directions to sound sources (vectorized).
-
-        Uses cosine of angle difference between microphone orientation and direction to each source.
-
-        Args:
-            microphone_orientation: Orientation angle of microphone (rad)
-            end_effector_pos: Position of end effector (microphone), shape (2,)
-            source_positions: Positions of sound sources, shape (n_sources, 2)
-
-        Returns:
-            orientation_factors: Array of factors between 0 and 1, shape (n_sources,)
-        """
-        if len(source_positions) == 0:
-            return np.array([])
-
-        directions = source_positions - end_effector_pos  # (n_sources, 2)
-
-        direction_angles = np.arctan2(directions[:, 1], directions[:, 0])  # (n_sources,)
-
-        angle_diffs = direction_angles - microphone_orientation  # (n_sources,)
-        # Normalize to [-pi, pi]
-        angle_diffs = np.arctan2(np.sin(angle_diffs), np.cos(angle_diffs))
-
-        # Orientation factors: cosine of angle difference, clamped to [0, 1]
-        orientation_factors = np.maximum(0.0, np.cos(angle_diffs))  # (n_sources,)
-
-        return orientation_factors
-
-    def _compute_distance_to_nearest_source(self, pos: np.ndarray,
-                                           source_positions: np.ndarray) -> float:
-        """
-        Compute distance to nearest sound source (vectorized).
-
-        Args:
-            pos: Position to compute distance from, shape (2,)
-            source_positions: Positions of sound sources, shape (n_sources, 2)
-
-        Returns:
-            Distance to nearest source, or inf if no sources
-        """
-        if len(source_positions) == 0:
-            return float('inf')
-
-        distances = np.linalg.norm(source_positions - pos, axis=1)  # (n_sources,)
-        return np.min(distances)
 
     def get_render_data(self) -> Dict[str, Any]:
         """
