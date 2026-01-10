@@ -98,6 +98,28 @@ class SoundFlower:
         self.simulation_time += self.config.dt
         self.step_count += 1
 
+    def forward(self, n_steps: int):
+        """
+        Step forward by N steps, then refresh logging and animation once.
+
+        Args:
+            n_steps: Number of steps to advance
+        """
+        # Step forward N times using the normal step() method.
+        # Logging and animation still happen normally.
+        for _ in range(n_steps):
+            self.step()
+
+        # Force refresh of logging and animation after all steps
+        # (regardless of timing periods)
+        if self.logger:
+            self.logger.log_step(self.environment.get_state())
+            self.time_since_last_log = 0.0
+
+        if self.animator:
+            self.animator.step(self.environment)
+            self.time_since_last_frame = 0.0
+
 
     def finish(self):
         if self.animator:

@@ -109,3 +109,16 @@ Remove ARCHITECTURE.md, update all references to it if any.
 #~
 #Refacotr by hand: introduce logger and simplify integration by removing asyncio
 
+~
+Implement advanced simulation stepping features (through primarily changing @soundflower.py and @demo.py)
+in the following way:
+1. When the Return key is pressed, the simulation pauses and steps forward by
+a single step, and logging and animation are all refreshed once by that one step.
+After that, the simulation remains in a paused state.
+2. When the '1' key is pressed, the behavior follows the same logic, except that the simulation
+advances by 10 steps, and logging and animtation are all frefreshed once by that 10 steps.
+3. When the '2' key is pressed, the same things, except that the simulation advances by 100 steps.
+4. When the '3' key is pressed, the same thing by 1000 steps.
+5. If the Space key is pressed while the simulation is paused, the whole simulation resumes normally
+along with logging and animation, as how things are now.
+
