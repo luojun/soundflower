@@ -37,18 +37,22 @@ def main(headless: bool = False):
 
     soundflower.start()
     paused = False
+    should_quit = False
 
     try:
         while True:
             if animator and pygame.get_init():
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
-                        break
+                        should_quit = True
                     elif event.type == pygame.KEYDOWN:
                         if event.key == pygame.K_SPACE:
                             paused = not paused
                         elif event.key in (pygame.K_ESCAPE, pygame.K_q):
-                            break
+                            should_quit = True
+
+            if should_quit:
+                break
             
             if paused:
                 time.sleep(0.01)
