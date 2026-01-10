@@ -122,3 +122,22 @@ advances by 10 steps, and logging and animtation are all frefreshed once by that
 5. If the Space key is pressed while the simulation is paused, the whole simulation resumes normally
 along with logging and animation, as how things are now.
 
+~
+Update the code to calculate and report performance better in the following way:
+1. Replace wherever appropriate (e.g. in @physics.py) "sound_energy" by "sound_intensity";
+2. Introduce specific converstion of sound_intensity to sound_energy by (2a) assuming
+a unit area and (2b) multipilcation by time step size, i.e. dt.
+3. Introduce orientation angle for the "microphone" (of the unit area) that receives
+the sound such that the sound_intensity's conversion into sound_energy is a function of
+the orientation angle, such as proportional to the cosine of difference between the
+orientation angle and the direction of the sound source, or following whatever simple
+but sensible physics. The orientation of the microphone should be in the direction of
+the outmost link from the soundflower robot's base. Add up sound energy from multiple sources.
+4. Introduce a new variable in @soundflower.py called "cumulative_sound_energy" and update it
+according to the accumulation over time of sound_energy by the microphone.
+5. Update logging for the final step to also report the cumulative_sound_energy.
+6. Update logging per step to make the logged text easier to read with appropriate formatting
+and include the simulation_time at that step as well as the step_count.
+7. Remove simulation_time and step_count from @physics_engine.py and make sure that only
+@soundflower.py tracks these.
+

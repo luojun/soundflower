@@ -8,15 +8,15 @@ from .pygame_framer import PygameFramer
 class Animator:
     """
     Animator interface for visualization.
-    
+
     Decoupled from simulation logic, runs at configurable frame rate.
     Can be attached/detached from a running simulation.
     """
-    
+
     def __init__(self, config):
         """
         Initialize animator.
-        
+
         Args:
             environment: Environment instance to animate
             config: Configuration object
@@ -36,7 +36,7 @@ class Animator:
         """Animation step."""
         render_data = environment.get_render_data()
         self.framer.render_frame(render_data)
-    
+
     def finish(self):
         self.framer.finish()
 

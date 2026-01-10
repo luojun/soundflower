@@ -14,7 +14,7 @@ def main(headless: bool = False):
     print("=" * 60)
     print("Sound Flower - Robotic Arm Sound Source Tracking Demo")
     print("=" * 60)
-    
+
     if headless:
         print("\nRunning in headless mode ...")
     else:
@@ -27,9 +27,9 @@ def main(headless: bool = False):
         print("  3: Pause and step forward 1000 steps")
         print("  4: Pause and step forward 10000 steps")
         print("  ESC or Q: Quit")
-    
+
     print("=" * 60)
-    
+
     config = create_default_config(sound_source_angular_velocity=0.3)
     environment = Environment(config)
     agent = HeuristicAgent()
@@ -73,7 +73,7 @@ def main(headless: bool = False):
 
             if should_quit:
                 break
-            
+
             if paused:
                 time.sleep(0.01)
             else:

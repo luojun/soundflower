@@ -50,10 +50,10 @@ class SoundFlower:
         if self.animator:
             self.animation_period = 1.0 / config.animation_frequency
 
-        # Update simulation time
         self.simulation_time = 0.0
         self.step_count = 0
 
+        self.cumulative_sound_energy = 0.0
 
     def start(self):
         if self.logger:
@@ -70,11 +70,14 @@ class SoundFlower:
     def step(self):
         self.environment.step()
 
+        # Get current state to accumulate sound energy
+        environment_state = self.environment.get_state()
+        self.cumulative_sound_energy += environment_state.observation.sound_energy
+
         if self.agent:
             self.time_since_last_aciton += self.config.dt
 
             if self.time_since_last_aciton >= self.control_period:
-                environment_state = self.environment.get_state()
                 self.cumulative_reward += environment_state.reward
                 action = self.agent.select_action(environment_state.observation)
                 self.environment.apply_action(action)
@@ -85,7 +88,7 @@ class SoundFlower:
             self.time_since_last_log += self.config.dt
 
             if self.time_since_last_log >= self.logging_period:
-                self.logger.log_step(self.environment.get_state())
+                self.logger.log_step(environment_state, self.simulation_time, self.step_count)
                 self.time_since_last_log = 0.0
 
         if self.animator:
@@ -113,7 +116,8 @@ class SoundFlower:
         # Force refresh of logging and animation after all steps
         # (regardless of timing periods)
         if self.logger:
-            self.logger.log_step(self.environment.get_state())
+            environment_state = self.environment.get_state()
+            self.logger.log_step(environment_state, self.simulation_time, self.step_count)
             self.time_since_last_log = 0.0
 
         if self.animator:
