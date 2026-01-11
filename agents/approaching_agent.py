@@ -65,9 +65,14 @@ class ApproachingAgent(BaseAgent):
             # Already at minimum distance, maintain current position
             target_pos = end_effector_pos
 
-        # Solve IK to reach target position (minimizes distance, ignores orientation)
+        # Solve IK to reach target position (position-only, orientation_weight=0.0 to ignore orientation)
         desired_angles = self._solve_inverse_kinematics(
-            target_pos, observation.arm_angles, self.link_lengths
+            current_angles=observation.arm_angles,
+            link_lengths=self.link_lengths,
+            target_pos=target_pos,
+            target_orientation=None,
+            position_weight=1.0,
+            orientation_weight=0.0
         )
 
         # Compute PD torques

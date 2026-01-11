@@ -328,3 +328,18 @@ These fixes will ensure that the IK solver can handle all angle ranges correctly
 PD controller computes appropriate torques regardless of the current joint angles' positions
 relative to the ±π boundary.
 
+~
+Extend the inverse kinematics solver to explicitly support both position and orientation objectives,
+and update all agents to use this unified interface. Energy maximization depends on both distance
+(inverse square law) and orientation (cosine factor), so agents must optimize both independently or
+in combination. Extend _solve_inverse_kinematics in @agents/base_agent.py to accept optional
+target_orientation and weights (position_weight, orientation_weight), allowing position-only,
+orientation-only, or combined control. Update PointingAgent to use orientation-only IK
+(position_weight=0.0), ApproachingAgent to use position-only IK (orientation_weight=0.0),
+and TrackingAgent to use both with appropriate weights. Rename variables in
+@environment/environment.py for clarity where appropriate.
+~
+Update the argument order of _solve_inverse_kinematics and other related functions to a more
+natural and appropriate order. Do review the variable names to see which ones should be updated
+too. And no trailing whitespaces please.
+

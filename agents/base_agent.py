@@ -150,62 +150,118 @@ class BaseAgent(ABC):
 
         return joint_positions[-1]
 
-    def _solve_inverse_kinematics(self, target_pos: np.ndarray,
-                                  current_angles: np.ndarray,
+    def _solve_inverse_kinematics(self, current_angles: np.ndarray,
                                   link_lengths: np.ndarray,
+                                  target_pos: np.ndarray = None,
+                                  target_orientation: float = None,
+                                  position_weight: float = 1.0,
+                                  orientation_weight: float = 1.0,
                                   max_iterations: int = 20,
                                   tolerance: float = 1e-3,
                                   damping: float = 1e-6) -> np.ndarray:
         """
-        Solve inverse kinematics to reach target position using Jacobian-based method.
+        Solve inverse kinematics to reach target position and/or orientation using Jacobian-based method.
 
         Args:
-            target_pos: Target (x, y) position for end effector
             current_angles: Current joint angles
             link_lengths: Lengths of arm links
+            target_pos: Optional target (x, y) position for end effector (None to ignore position)
+            target_orientation: Optional target orientation angle for last link (None to ignore orientation)
+            position_weight: Weight for position objective (0.0 to ignore position)
+            orientation_weight: Weight for orientation objective (0.0 to ignore orientation)
             max_iterations: Maximum iterations for IK solver
             tolerance: Convergence tolerance
             damping: Damping factor for regularization
 
         Returns:
-            desired_angles: Joint angles to reach target position
+            desired_angles: Joint angles to reach target position and/or orientation
         """
         angles = current_angles.copy()
         # Normalize input angles to [-π, π] for consistency
         angles = np.arctan2(np.sin(angles), np.cos(angles))
 
+        optimize_position = target_pos is not None and position_weight > 0.0
+        optimize_orientation = target_orientation is not None and orientation_weight > 0.0
+
+        if optimize_orientation:
+            target_orientation = np.arctan2(np.sin(target_orientation), np.cos(target_orientation))
+
         for iteration in range(max_iterations):
             # Forward kinematics
             current_pos = self._forward_kinematics(angles, link_lengths)
-            error = target_pos - current_pos
-            error_magnitude = np.linalg.norm(error)
 
-            if error_magnitude < tolerance:
+            # Position error
+            pos_error = np.zeros(2)
+            pos_error_magnitude = 0.0
+            if optimize_position:
+                pos_error = target_pos - current_pos
+                pos_error_magnitude = np.linalg.norm(pos_error)
+
+            # Orientation error
+            orientation_error = 0.0
+            if optimize_orientation:
+                current_cumulative_angle = np.sum(angles)
+                orientation_error = np.arctan2(
+                    np.sin(target_orientation - current_cumulative_angle),
+                    np.cos(target_orientation - current_cumulative_angle)
+                )
+
+            # Check convergence
+            pos_converged = not optimize_position or pos_error_magnitude < tolerance
+            orient_converged = not optimize_orientation or abs(orientation_error) < tolerance
+            if pos_converged and orient_converged:
                 break
 
-            # Compute Jacobian numerically
-            jacobian = np.zeros((2, len(angles)))
-            epsilon = 1e-5
+            # Compute position Jacobian numerically
+            pos_jacobian = np.zeros((2, len(angles)))
+            if optimize_position:
+                epsilon = 1e-5
+                for i in range(len(angles)):
+                    perturbed_angles = angles.copy()
+                    perturbed_angles[i] += epsilon
+                    perturbed_pos = self._forward_kinematics(perturbed_angles, link_lengths)
+                    pos_jacobian[:, i] = (perturbed_pos - current_pos) / epsilon
 
-            for i in range(len(angles)):
-                perturbed_angles = angles.copy()
-                perturbed_angles[i] += epsilon
-                perturbed_pos = self._forward_kinematics(perturbed_angles, link_lengths)
-                jacobian[:, i] = (perturbed_pos - current_pos) / epsilon
+            # Compute orientation Jacobian
+            # Since microphone_orientation = sum(angles), the Jacobian is all ones
+            orientation_jacobian = np.zeros((1, len(angles)))
+            if optimize_orientation:
+                orientation_jacobian = np.ones((1, len(angles)))
+
+            # Combine into augmented Jacobian and error
+            if optimize_position and optimize_orientation:
+                # Both objectives: stack position and orientation
+                weighted_pos_jacobian = position_weight * pos_jacobian
+                weighted_orientation_jacobian = orientation_weight * orientation_jacobian
+                augmented_jacobian = np.vstack([weighted_pos_jacobian, weighted_orientation_jacobian])
+
+                weighted_pos_error = position_weight * pos_error
+                weighted_orientation_error = orientation_weight * orientation_error
+                augmented_error = np.hstack([weighted_pos_error, weighted_orientation_error])
+            elif optimize_position:
+                # Position only
+                augmented_jacobian = position_weight * pos_jacobian
+                augmented_error = position_weight * pos_error
+            elif optimize_orientation:
+                # Orientation only
+                augmented_jacobian = orientation_weight * orientation_jacobian
+                augmented_error = np.array([orientation_weight * orientation_error])
+            else:
+                # Neither (shouldn't happen, but handle gracefully)
+                break
 
             # Solve: delta_angles = J^+ * error (damped least squares)
-            # Use pseudo-inverse with damping: delta_angles = J^T * (J * J^T + λI)^(-1) * error
             try:
-                jjt = jacobian @ jacobian.T
-                jjt_damped = jjt + np.eye(2) * damping
+                jjt = augmented_jacobian @ augmented_jacobian.T
+                jjt_damped = jjt + np.eye(jjt.shape[0]) * damping
                 jjt_inv = np.linalg.inv(jjt_damped)
-                delta_angles = jacobian.T @ jjt_inv @ error
+                delta_angles = augmented_jacobian.T @ jjt_inv @ augmented_error
                 angles += 0.5 * delta_angles  # Damped update
             except np.linalg.LinAlgError:
                 # Fallback: gradient descent
                 for i in range(len(angles)):
-                    if np.linalg.norm(jacobian[:, i]) > 1e-6:
-                        gradient = np.dot(error, jacobian[:, i]) / np.linalg.norm(jacobian[:, i])**2
+                    if np.linalg.norm(augmented_jacobian[:, i]) > 1e-6:
+                        gradient = np.dot(augmented_error, augmented_jacobian[:, i]) / np.linalg.norm(augmented_jacobian[:, i])**2
                         angles[i] += 0.1 * gradient
 
             # Don't clamp during iterations - allow angles to evolve naturally

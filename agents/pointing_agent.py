@@ -49,21 +49,24 @@ class PointingAgent(BaseAgent):
         nearest_idx = np.argmin(distances)
         source_pos = observation.sound_source_positions[nearest_idx]
 
-        # Maintain current distance from base, optimize orientation toward source
-        # Project source direction onto circle centered at base with current radius
-        current_distance = np.linalg.norm(end_effector_pos)
-        if current_distance > 1e-6:
-            # Direction from base to source
-            direction_to_source = source_pos / np.linalg.norm(source_pos)
-            # Target position: maintain distance, point toward source
-            target_pos = direction_to_source * current_distance
+        # Compute target orientation: direction from end effector to source
+        direction_to_source = source_pos - end_effector_pos
+        distance_to_source = np.linalg.norm(direction_to_source)
+        if distance_to_source > 1e-6:
+            direction_to_source_normalized = direction_to_source / distance_to_source
+            target_orientation = np.arctan2(direction_to_source_normalized[1], direction_to_source_normalized[0])
 
-            # Solve IK to reach target position (maintains distance, optimizes orientation)
+            # Solve IK with orientation-only (position_weight=0.0 to ignore position)
             desired_angles = self._solve_inverse_kinematics(
-                target_pos, observation.arm_angles, self.link_lengths
+                current_angles=observation.arm_angles,
+                link_lengths=self.link_lengths,
+                target_pos=None,
+                target_orientation=target_orientation,
+                position_weight=0.0,
+                orientation_weight=1.0
             )
         else:
-            # Fallback: if at base, use angle-based approach
+            # Fallback: if source is at end effector, use angle-based approach
             target_angle = self._compute_target_angle_for_pointing(observation)
             desired_angles = self._compute_desired_joint_angles(
                 target_angle, observation.arm_angles

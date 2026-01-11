@@ -54,12 +54,23 @@ class TrackingAgent(BaseAgent):
         nearest_idx = np.argmin(distances)
         source_pos = observation.sound_source_positions[nearest_idx]
 
-        # Compute target positions for both objectives
-        current_distance = np.linalg.norm(end_effector_pos)
+        # Compute target position and orientation for both objectives
         direction_to_source = source_pos - end_effector_pos
         distance_to_source = np.linalg.norm(direction_to_source)
 
-        # Pointing target: maintain distance, point toward source
+        # Target orientation: direction from end effector to source
+        if distance_to_source > 1e-6:
+            direction_to_source_normalized = direction_to_source / distance_to_source
+            target_orientation = np.arctan2(direction_to_source_normalized[1], direction_to_source_normalized[0])
+        else:
+            # Fallback: if source is at end effector, use base-to-source direction
+            if np.linalg.norm(source_pos) > 1e-6:
+                target_orientation = np.arctan2(source_pos[1], source_pos[0])
+            else:
+                target_orientation = observation.microphone_orientation
+
+        # Target position: weighted combination of pointing and approaching targets
+        current_distance = np.linalg.norm(end_effector_pos)
         if current_distance > 1e-6:
             direction_to_source_normalized = source_pos / np.linalg.norm(source_pos)
             pointing_target = direction_to_source_normalized * current_distance
@@ -77,9 +88,15 @@ class TrackingAgent(BaseAgent):
         target_pos = (self.pointing_weight * pointing_target +
                      (1 - self.pointing_weight) * approaching_target)
 
-        # Solve IK to reach combined target position
+        # Solve IK with both position and orientation objectives
+        # Use pointing_weight to balance position vs orientation emphasis
         desired_angles = self._solve_inverse_kinematics(
-            target_pos, observation.arm_angles, self.link_lengths
+            current_angles=observation.arm_angles,
+            link_lengths=self.link_lengths,
+            target_pos=target_pos,
+            target_orientation=target_orientation,
+            position_weight=1.0,
+            orientation_weight=self.pointing_weight
         )
 
         # Compute PD torques

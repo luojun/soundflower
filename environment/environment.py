@@ -137,14 +137,14 @@ class Environment:
 
             sound_intensity = np.sum(source_intensities)
 
-            direction_angles = np.arctan2(directions[:, 1], directions[:, 0])  # (n_sources,)
+            source_direction_angles = np.arctan2(directions[:, 1], directions[:, 0])  # (n_sources,)
 
-            angle_diffs = direction_angles - microphone_orientation  # (n_sources,)
+            orientation_errors = source_direction_angles - microphone_orientation  # (n_sources,)
             # Normalize to [-pi, pi]
-            angle_diffs = np.arctan2(np.sin(angle_diffs), np.cos(angle_diffs))
+            orientation_errors = np.arctan2(np.sin(orientation_errors), np.cos(orientation_errors))
 
             # Orientation factors: cosine of angle difference, clamped to [0, 1]
-            orientation_factors = np.maximum(0.0, np.cos(angle_diffs))  # (n_sources,)
+            orientation_factors = np.maximum(0.0, np.cos(orientation_errors))  # (n_sources,)
 
             # Energy = Intensity × Area × Time × Orientation_factor
             source_energies = (source_intensities * microphone_area * self.config.dt *
