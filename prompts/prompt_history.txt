@@ -343,3 +343,7 @@ Update the argument order of _solve_inverse_kinematics and other related functio
 natural and appropriate order. Do review the variable names to see which ones should be updated
 too. And no trailing whitespaces please.
 
+~
+Fix the issue where the keys '1', '2', '3', '4' no longer seem to have effect for @demo_all.
+Note that these keys still works in @demo.
+

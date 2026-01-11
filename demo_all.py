@@ -229,10 +229,9 @@ class MultiAgentDemo:
         for soundflower in self.soundflowers:
             soundflower.forward(n_steps)
 
-    def handle_events(self):
+    def handle_events(self, paused: bool = False):
         """Handle pygame events for all windows."""
         should_quit = False
-        paused = False
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -296,7 +295,7 @@ class MultiAgentDemo:
         try:
             while True:
                 if not self.headless:
-                    should_quit, paused = self.handle_events()
+                    should_quit, paused = self.handle_events(paused)
 
                 if should_quit:
                     break
