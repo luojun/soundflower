@@ -68,21 +68,36 @@ class Plotter:
             self._cumulative_energies: Dict[str, List[tuple]] = defaultdict(list)
 
         # Agent color and style mapping
-        self._agent_colors = {
+        # Base colors for agent types
+        self._base_colors = {
             'PointingAgent': '#FF6464',      # Red
             'ApproachingAgent': '#64FF64',    # Green
             'TrackingAgent': '#6464FF',       # Blue
         }
-        self._agent_styles = {
-            'PointingAgent': '-',            # Solid
-            'ApproachingAgent': '--',        # Dashed
-            'TrackingAgent': '-.',           # Dash-dot
+        # Base styles for link configurations
+        self._base_styles = {
+            '2-link': '-',                   # Solid
+            '3-link': '--',                  # Dashed
         }
 
         # Track cumulative values per agent (only for non-shared or first shared instance)
         if not (self._is_shared and hasattr(self, '_shared_instance')):
             self._agent_cumulative_reward: Dict[str, float] = defaultdict(float)
             self._agent_cumulative_energy: Dict[str, float] = defaultdict(float)
+
+    def _get_agent_color(self, agent_name: str) -> str:
+        """Get color for an agent based on its name."""
+        # Extract base agent name (before underscore)
+        base_name = agent_name.split('_')[0]
+        return self._base_colors.get(base_name, '#808080')  # Default gray
+
+    def _get_agent_style(self, agent_name: str) -> str:
+        """Get line style for an agent based on its name."""
+        # Extract link configuration (after underscore, if present)
+        if '_' in agent_name:
+            link_config = agent_name.split('_')[1]
+            return self._base_styles.get(link_config, '-')  # Default solid
+        return '-'  # Default solid
 
     def _initialize_plots(self):
         """Initialize matplotlib figures and axes."""
@@ -196,8 +211,8 @@ class Plotter:
 
         # Plot data for each agent
         for agent_name in self._step_rewards.keys():
-            color = self._agent_colors.get(agent_name, '#808080')
-            style = self._agent_styles.get(agent_name, '-')
+            color = self._get_agent_color(agent_name)
+            style = self._get_agent_style(agent_name)
 
             # Per-step reward
             if self._step_rewards[agent_name]:
@@ -223,11 +238,11 @@ class Plotter:
                 self.ax_cum_energy.plot(steps, cum_energies, color=color, linestyle=style,
                                        label=agent_name, linewidth=1.5)
 
-        # Add legends
-        self.ax_reward.legend(loc='best', fontsize=8)
-        self.ax_energy.legend(loc='best', fontsize=8)
-        self.ax_cum_reward.legend(loc='best', fontsize=8)
-        self.ax_cum_energy.legend(loc='best', fontsize=8)
+        # Add legends (smaller font for 6 instances)
+        self.ax_reward.legend(loc='best', fontsize=7, ncol=2)
+        self.ax_energy.legend(loc='best', fontsize=7, ncol=2)
+        self.ax_cum_reward.legend(loc='best', fontsize=7, ncol=2)
+        self.ax_cum_energy.legend(loc='best', fontsize=7, ncol=2)
 
         # Refresh display
         plt.tight_layout()

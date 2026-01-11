@@ -347,3 +347,11 @@ too. And no trailing whitespaces please.
 Fix the issue where the keys '1', '2', '3', '4' no longer seem to have effect for @demo_all.
 Note that these keys still works in @demo.
 
+~
+Fully implement a 3-link version of the environment, use it with demo.py, and update @demo_all
+so that it runs 6 instances, namely the 3 agent types crossed with the 2-link and 3-link
+versions of the environment.
+~
+Do not forget to update plotting if necessary to appropriately plot the performance curves
+for all 6 instances simultaneously.
+

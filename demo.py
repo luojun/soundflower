@@ -32,7 +32,13 @@ def main(headless: bool = False):
 
     print("=" * 60)
 
+    # Create 3-link configuration
     config = create_default_config(sound_source_angular_velocity=0.3)
+    config.num_links = 3
+    config.link_lengths = [0.5, 0.4, 0.3]
+    config.link_masses = [1.0, 0.8, 0.6]
+    config.joint_frictions = [0.1, 0.12, 0.15]
+    config.__post_init__()  # Ensure configuration is validated
     environment = Environment(config)
     agent = TrackingAgent(
         link_lengths=np.array(config.link_lengths),

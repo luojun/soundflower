@@ -25,81 +25,110 @@ class MultiAgentDemo:
             headless: If True, run without animation
         """
         self.headless = headless
-        self.config = create_default_config(sound_source_angular_velocity=0.3)
 
         # Create shared plotter instance for all agents
         shared_plotter = None
         if not headless:
             # Create first plotter instance (will become shared)
-            shared_plotter = Plotter(self.config, agent_name=None, shared=True)
+            base_config = create_default_config(sound_source_angular_velocity=0.3)
+            shared_plotter = Plotter(base_config, agent_name=None, shared=True)
 
-        # Create three separate environments and agents
+        # Create configurations for 2-link and 3-link arms
+        config_2link = create_default_config(sound_source_angular_velocity=0.3)
+        config_2link.num_links = 2
+        config_2link.link_lengths = [0.5, 0.3]
+        config_2link.link_masses = [1.0, 0.6]
+        config_2link.joint_frictions = [0.1, 0.15]
+        config_2link.__post_init__()
+
+        config_3link = create_default_config(sound_source_angular_velocity=0.3)
+        config_3link.num_links = 3
+        config_3link.link_lengths = [0.5, 0.4, 0.3]
+        config_3link.link_masses = [1.0, 0.8, 0.6]
+        config_3link.joint_frictions = [0.1, 0.12, 0.15]
+        config_3link.__post_init__()
+
+        # Create six separate environments and agents (3 agents × 2 link configs)
         self.soundflowers = []
         agent_configs = [
             ("PointingAgent", PointingAgent, (255, 100, 100)),  # Red
             ("ApproachingAgent", ApproachingAgent, (100, 255, 100)),  # Green
             ("TrackingAgent", TrackingAgent, (100, 100, 255)),  # Blue
         ]
+        link_configs = [
+            (config_2link, "2-link"),
+            (config_3link, "3-link"),
+        ]
 
-        for agent_name, agent_class, color in agent_configs:
-            environment = Environment(self.config)
-            # Pass link_lengths and min_distance_to_source to agents
-            if agent_class == ApproachingAgent:
-                agent = agent_class(
-                    link_lengths=np.array(self.config.link_lengths),
-                    min_distance_to_source=self.config.min_distance_to_source
+        for link_config, link_name in link_configs:
+            for agent_name, agent_class, color in agent_configs:
+                environment = Environment(link_config)
+                full_agent_name = f"{agent_name}_{link_name}"
+                # Pass link_lengths and min_distance_to_source to agents
+                if agent_class == ApproachingAgent:
+                    agent = agent_class(
+                        link_lengths=np.array(link_config.link_lengths),
+                        min_distance_to_source=link_config.min_distance_to_source
+                    )
+                elif agent_class == TrackingAgent:
+                    agent = agent_class(
+                        link_lengths=np.array(link_config.link_lengths),
+                        min_distance_to_source=link_config.min_distance_to_source
+                    )
+                else:
+                    agent = agent_class(link_lengths=np.array(link_config.link_lengths))
+                logger = Logger(agent_name=full_agent_name)
+
+                # Create plotter instance for this agent (will use shared instance)
+                plotter = None
+                if shared_plotter:
+                    plotter = Plotter(link_config, agent_name=full_agent_name, shared=True)
+
+                soundflower = SoundFlower(
+                    link_config, environment, agent,
+                    logger=logger, animator=None, plotter=plotter  # We'll handle rendering ourselves
                 )
-            elif agent_class == TrackingAgent:
-                agent = agent_class(
-                    link_lengths=np.array(self.config.link_lengths),
-                    min_distance_to_source=self.config.min_distance_to_source
-                )
-            else:
-                agent = agent_class(link_lengths=np.array(self.config.link_lengths))
-            logger = Logger(agent_name=agent_name)
-
-            # Create plotter instance for this agent (will use shared instance)
-            plotter = None
-            if shared_plotter:
-                plotter = Plotter(self.config, agent_name=agent_name, shared=True)
-
-            soundflower = SoundFlower(
-                self.config, environment, agent,
-                logger=logger, animator=None, plotter=plotter  # We'll handle rendering ourselves
-            )
-            soundflower.agent_name = agent_name
-            soundflower.agent_color = color
-            self.soundflowers.append(soundflower)
+                soundflower.agent_name = full_agent_name
+                soundflower.agent_color = color
+                soundflower.link_config_name = link_name
+                self.soundflowers.append(soundflower)
 
         # Initialize pygame for multi-panel visualization
         if not headless:
             pygame.init()
             self.panel_width = 400
             self.panel_height = 400
-            self.window_width = self.panel_width * 3
-            self.window_height = self.panel_height
+            self.panels_per_row = 3
+            self.num_rows = 2
+            self.window_width = self.panel_width * self.panels_per_row
+            self.window_height = self.panel_height * self.num_rows
             self.screen = pygame.display.set_mode((self.window_width, self.window_height))
-            pygame.display.set_caption("Sound Flower - Multi-Agent Comparison")
+            pygame.display.set_caption("Sound Flower - Multi-Agent Comparison (2-link & 3-link)")
             self.font = pygame.font.Font(None, 24)
             self.small_font = pygame.font.Font(None, 18)
             self.wave_phase = 0.0
 
-    def _world_to_screen(self, world_pos: np.ndarray, panel_offset_x: int) -> tuple:
+    def _world_to_screen(self, world_pos: np.ndarray, panel_offset_x: int, panel_offset_y: int, config) -> tuple:
         """Convert environment coordinates to screen coordinates for a panel."""
-        world_size = max(self.config.circle_radius, sum(self.config.link_lengths)) * 1.2
+        world_size = max(config.circle_radius, sum(config.link_lengths)) * 1.2
         screen_x = panel_offset_x + self.panel_width // 2 + int(world_pos[0] * self.panel_width / (2 * world_size))
-        screen_y = self.panel_height // 2 - int(world_pos[1] * self.panel_height / (2 * world_size))
+        screen_y = panel_offset_y + self.panel_height // 2 - int(world_pos[1] * self.panel_height / (2 * world_size))
         return screen_x, screen_y
 
-    def _world_to_screen_radius(self, world_radius: float) -> int:
+    def _world_to_screen_radius(self, world_radius: float, config) -> int:
         """Convert environment radius to screen radius."""
-        world_size = max(self.config.circle_radius, sum(self.config.link_lengths)) * 1.2
+        world_size = max(config.circle_radius, sum(config.link_lengths)) * 1.2
         return int(world_radius * min(self.panel_width, self.panel_height) / (2 * world_size))
 
     def _render_panel(self, soundflower: SoundFlower, panel_index: int):
         """Render a single panel for one agent."""
-        panel_offset_x = panel_index * self.panel_width
+        # Calculate panel position (2 rows × 3 columns)
+        row = panel_index // self.panels_per_row
+        col = panel_index % self.panels_per_row
+        panel_offset_x = col * self.panel_width
+        panel_offset_y = row * self.panel_height
         render_data = soundflower.environment.get_render_data()
+        config = soundflower.environment.config
 
         # Colors
         colors = {
@@ -116,18 +145,18 @@ class MultiAgentDemo:
 
         # Draw panel background
         pygame.draw.rect(self.screen, colors['background'],
-                        (panel_offset_x, 0, self.panel_width, self.panel_height))
+                        (panel_offset_x, panel_offset_y, self.panel_width, self.panel_height))
 
         # Draw grid
-        world_size = max(self.config.circle_radius, sum(self.config.link_lengths)) * 1.2
+        world_size = max(config.circle_radius, sum(config.link_lengths)) * 1.2
         grid_spacing = world_size / 5
         screen_spacing = int(grid_spacing * min(self.panel_width, self.panel_height) / (2 * world_size))
         center_x = panel_offset_x + self.panel_width // 2
-        center_y = self.panel_height // 2
+        center_y = panel_offset_y + self.panel_height // 2
 
         for i in range(-5, 6):
             x = center_x + i * screen_spacing
-            pygame.draw.line(self.screen, colors['grid'], (x, 0), (x, self.panel_height), 1)
+            pygame.draw.line(self.screen, colors['grid'], (x, panel_offset_y), (x, panel_offset_y + self.panel_height), 1)
         for i in range(-5, 6):
             y = center_y + i * screen_spacing
             pygame.draw.line(self.screen, colors['grid'],
@@ -135,39 +164,39 @@ class MultiAgentDemo:
 
         # Draw circle boundary
         center = (center_x, center_y)
-        radius = self._world_to_screen_radius(self.config.circle_radius)
+        radius = self._world_to_screen_radius(config.circle_radius, config)
         pygame.draw.circle(self.screen, colors['circle'], center, radius, 2)
 
         # Draw arm
         joint_positions = render_data['joint_positions']
         end_effector_pos = render_data['end_effector_pos']
         for i in range(len(joint_positions) - 1):
-            start = self._world_to_screen(joint_positions[i], panel_offset_x)
-            end = self._world_to_screen(joint_positions[i + 1], panel_offset_x)
+            start = self._world_to_screen(joint_positions[i], panel_offset_x, panel_offset_y, config)
+            end = self._world_to_screen(joint_positions[i + 1], panel_offset_x, panel_offset_y, config)
             pygame.draw.line(self.screen, colors['arm'], start, end, 5)
 
         if len(joint_positions) > 0:
-            start = self._world_to_screen(joint_positions[-1], panel_offset_x)
-            end = self._world_to_screen(end_effector_pos, panel_offset_x)
+            start = self._world_to_screen(joint_positions[-1], panel_offset_x, panel_offset_y, config)
+            end = self._world_to_screen(end_effector_pos, panel_offset_x, panel_offset_y, config)
             pygame.draw.line(self.screen, colors['arm'], start, end, 5)
 
         # Draw joints
         for i, joint_pos in enumerate(joint_positions):
-            screen_pos = self._world_to_screen(joint_pos, panel_offset_x)
+            screen_pos = self._world_to_screen(joint_pos, panel_offset_x, panel_offset_y, config)
             if i == 0:
                 pygame.draw.circle(self.screen, colors['joint'], screen_pos, 8)
             else:
                 pygame.draw.circle(self.screen, colors['joint'], screen_pos, 6)
 
         # Draw end effector
-        screen_pos = self._world_to_screen(end_effector_pos, panel_offset_x)
+        screen_pos = self._world_to_screen(end_effector_pos, panel_offset_x, panel_offset_y, config)
         pygame.draw.circle(self.screen, colors['end_effector'], screen_pos, 10)
         pygame.draw.circle(self.screen, (255, 255, 255), screen_pos, 10, 2)
 
         # Draw sound sources
         sound_source_positions = render_data.get('sound_source_positions', [])
         for source_pos in sound_source_positions:
-            screen_pos = self._world_to_screen(source_pos, panel_offset_x)
+            screen_pos = self._world_to_screen(source_pos, panel_offset_x, panel_offset_y, config)
             # Draw sound waves
             num_waves = 3
             for i in range(num_waves):
@@ -181,17 +210,17 @@ class MultiAgentDemo:
 
         # Draw agent name and info
         text_surface = self.font.render(soundflower.agent_name, True, colors['text'])
-        self.screen.blit(text_surface, (panel_offset_x + 10, 10))
+        self.screen.blit(text_surface, (panel_offset_x + 10, panel_offset_y + 10))
 
         sound_intensity = render_data.get('sound_intensity', 0.0)
         text_surface = self.small_font.render(f"Intensity: {sound_intensity:.4f}", True, colors['text'])
-        self.screen.blit(text_surface, (panel_offset_x + 10, 35))
+        self.screen.blit(text_surface, (panel_offset_x + 10, panel_offset_y + 35))
 
         if sound_source_positions:
             distances = [np.linalg.norm(end_effector_pos - sp) for sp in sound_source_positions]
             distance_to_source = min(distances)
             text_surface = self.small_font.render(f"Distance: {distance_to_source:.3f}", True, colors['text'])
-            self.screen.blit(text_surface, (panel_offset_x + 10, 53))
+            self.screen.blit(text_surface, (panel_offset_x + 10, panel_offset_y + 53))
 
     def start(self):
         """Start all simulations."""
@@ -271,10 +300,15 @@ class MultiAgentDemo:
         print("=" * 60)
         print("Sound Flower - Multi-Agent Comparison Demo")
         print("=" * 60)
-        print("\nRunning three agents simultaneously:")
-        print("  - PointingAgent (Red): Only orients toward sound source")
-        print("  - ApproachingAgent (Green): Only minimizes distance")
-        print("  - TrackingAgent (Blue): Both points and minimizes distance")
+        print("\nRunning six instances simultaneously:")
+        print("  Row 1 (2-link arms):")
+        print("    - PointingAgent (Red): Only orients toward sound source")
+        print("    - ApproachingAgent (Green): Only minimizes distance")
+        print("    - TrackingAgent (Blue): Both points and minimizes distance")
+        print("  Row 2 (3-link arms):")
+        print("    - PointingAgent (Red): Only orients toward sound source")
+        print("    - ApproachingAgent (Green): Only minimizes distance")
+        print("    - TrackingAgent (Blue): Both points and minimizes distance")
         print("=" * 60)
 
         if not self.headless:
