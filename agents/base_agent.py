@@ -8,7 +8,8 @@ from environment import Observation
 class BaseAgent(ABC):
     """Base class for agents with shared PD controller and utility functions."""
 
-    def __init__(self, kp: float = 5.0, kd: float = 0.5, max_torque: float = 10.0):
+    def __init__(self, kp: float = 5.0, kd: float = 0.5, max_torque: float = 10.0,
+                 link_lengths: np.ndarray = None):
         """
         Initialize base agent.
 
@@ -16,10 +17,12 @@ class BaseAgent(ABC):
             kp: Proportional gain for PD controller
             kd: Derivative gain for PD controller
             max_torque: Maximum torque that can be applied (for clamping)
+            link_lengths: Array of link lengths for IK computation (required for position-based IK)
         """
         self.kp = kp
         self.kd = kd
         self.max_torque = max_torque
+        self.link_lengths = link_lengths if link_lengths is not None else np.array([0.5, 0.5])
 
     @abstractmethod
     def select_action(self, observation: Observation) -> np.ndarray:
@@ -123,6 +126,90 @@ class BaseAgent(ABC):
             desired_angles[2] = target_angle * 0.2
 
         return desired_angles
+
+    def _forward_kinematics(self, angles: np.ndarray, link_lengths: np.ndarray) -> np.ndarray:
+        """
+        Compute forward kinematics: end effector position from joint angles.
+
+        Args:
+            angles: Joint angles (rad)
+            link_lengths: Lengths of arm links
+
+        Returns:
+            end_effector_pos: (x, y) position of end effector
+        """
+        joint_positions = np.zeros((len(link_lengths) + 1, 2))
+        cumulative_angle = 0.0
+
+        for i in range(len(link_lengths)):
+            cumulative_angle += angles[i]
+            joint_positions[i + 1] = joint_positions[i] + link_lengths[i] * np.array([
+                np.cos(cumulative_angle),
+                np.sin(cumulative_angle)
+            ])
+
+        return joint_positions[-1]
+
+    def _solve_inverse_kinematics(self, target_pos: np.ndarray,
+                                  current_angles: np.ndarray,
+                                  link_lengths: np.ndarray,
+                                  max_iterations: int = 20,
+                                  tolerance: float = 1e-3,
+                                  damping: float = 1e-6) -> np.ndarray:
+        """
+        Solve inverse kinematics to reach target position using Jacobian-based method.
+
+        Args:
+            target_pos: Target (x, y) position for end effector
+            current_angles: Current joint angles
+            link_lengths: Lengths of arm links
+            max_iterations: Maximum iterations for IK solver
+            tolerance: Convergence tolerance
+            damping: Damping factor for regularization
+
+        Returns:
+            desired_angles: Joint angles to reach target position
+        """
+        angles = current_angles.copy()
+
+        for iteration in range(max_iterations):
+            # Forward kinematics
+            current_pos = self._forward_kinematics(angles, link_lengths)
+            error = target_pos - current_pos
+            error_magnitude = np.linalg.norm(error)
+
+            if error_magnitude < tolerance:
+                break
+
+            # Compute Jacobian numerically
+            jacobian = np.zeros((2, len(angles)))
+            epsilon = 1e-5
+
+            for i in range(len(angles)):
+                perturbed_angles = angles.copy()
+                perturbed_angles[i] += epsilon
+                perturbed_pos = self._forward_kinematics(perturbed_angles, link_lengths)
+                jacobian[:, i] = (perturbed_pos - current_pos) / epsilon
+
+            # Solve: delta_angles = J^+ * error (damped least squares)
+            # Use pseudo-inverse with damping: delta_angles = J^T * (J * J^T + λI)^(-1) * error
+            try:
+                jjt = jacobian @ jacobian.T
+                jjt_damped = jjt + np.eye(2) * damping
+                jjt_inv = np.linalg.inv(jjt_damped)
+                delta_angles = jacobian.T @ jjt_inv @ error
+                angles += 0.5 * delta_angles  # Damped update
+            except np.linalg.LinAlgError:
+                # Fallback: gradient descent
+                for i in range(len(angles)):
+                    if np.linalg.norm(jacobian[:, i]) > 1e-6:
+                        gradient = np.dot(error, jacobian[:, i]) / np.linalg.norm(jacobian[:, i])**2
+                        angles[i] += 0.1 * gradient
+
+            # Clamp angles to reasonable range
+            angles = np.clip(angles, -np.pi, np.pi)
+
+        return angles
 
     def _compute_pd_torques(self, desired_angles: np.ndarray,
                            current_angles: np.ndarray,

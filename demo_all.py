@@ -43,7 +43,19 @@ class MultiAgentDemo:
 
         for agent_name, agent_class, color in agent_configs:
             environment = Environment(self.config)
-            agent = agent_class()
+            # Pass link_lengths and min_distance_to_source to agents
+            if agent_class == ApproachingAgent:
+                agent = agent_class(
+                    link_lengths=np.array(self.config.link_lengths),
+                    min_distance_to_source=self.config.min_distance_to_source
+                )
+            elif agent_class == TrackingAgent:
+                agent = agent_class(
+                    link_lengths=np.array(self.config.link_lengths),
+                    min_distance_to_source=self.config.min_distance_to_source
+                )
+            else:
+                agent = agent_class(link_lengths=np.array(self.config.link_lengths))
             logger = Logger(agent_name=agent_name)
 
             # Create plotter instance for this agent (will use shared instance)

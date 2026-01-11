@@ -72,13 +72,11 @@ class Plotter:
             'PointingAgent': '#FF6464',      # Red
             'ApproachingAgent': '#64FF64',    # Green
             'TrackingAgent': '#6464FF',       # Blue
-            'HeuristicAgent': '#FF64FF',     # Magenta
         }
         self._agent_styles = {
             'PointingAgent': '-',            # Solid
             'ApproachingAgent': '--',        # Dashed
             'TrackingAgent': '-.',           # Dash-dot
-            'HeuristicAgent': ':',           # Dotted
         }
 
         # Track cumulative values per agent (only for non-shared or first shared instance)

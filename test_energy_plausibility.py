@@ -3,7 +3,7 @@
 import numpy as np
 from experimenter.config import create_default_config
 from environment import Environment
-from agents.heuristic_agent import HeuristicAgent
+from agents.approaching_agent import ApproachingAgent
 from soundflower.soundflower import SoundFlower
 
 
@@ -21,7 +21,10 @@ def test_energy_plausibility():
     """
     config = create_default_config(sound_source_angular_velocity=0.2)
     environment = Environment(config)
-    agent = HeuristicAgent()
+    agent = ApproachingAgent(
+        link_lengths=np.array(config.link_lengths),
+        min_distance_to_source=config.min_distance_to_source
+    )
 
     soundflower = SoundFlower(
         config=config,

@@ -2,6 +2,7 @@
 
 import sys, time
 import pygame
+import numpy as np
 from environment import Environment
 from agents.tracking_agent import TrackingAgent
 from experimenter import create_default_config, Logger
@@ -33,7 +34,10 @@ def main(headless: bool = False):
 
     config = create_default_config(sound_source_angular_velocity=0.3)
     environment = Environment(config)
-    agent = TrackingAgent()
+    agent = TrackingAgent(
+        link_lengths=np.array(config.link_lengths),
+        min_distance_to_source=config.min_distance_to_source
+    )
     # Identify logger and plotter by agent type
     agent_name = agent.__class__.__name__
     logger = Logger(agent_name=agent_name)

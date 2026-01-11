@@ -236,3 +236,56 @@ the design pattern of @logger and @animator. The plotter should:
 ~
 Pleaes also update @demo to use @plotter.
 
+~
+Refactor and improve the agent system to address critical issues in decision-making and
+inverse kinematics. The current implementation has several problems that prevent agents
+from effectively exploiting their degrees of freedom and differentiating their behaviors:
+
+(1) Remove @HeuristicAgent as it is redundant. ApproachingAgent already implements the same
+    behavior using the BaseAgent architecture. Update @test_energy_plausibility.py to use
+    ApproachingAgent instead of HeuristicAgent, remove HeuristicAgent from @agents/__init__.py
+    exports, and remove any references to HeuristicAgent in the plotter color/style mappings.
+
+(2) Replace the simplistic inverse kinematics with proper position-based IK. The current
+    `_compute_desired_joint_angles` method in @BaseAgent only distributes a target angle
+    across joints with fixed ratios (0.7/0.3 for 2 links, 0.5/0.3/0.2 for 3 links), which
+    doesn't actually solve for joint angles to reach a target position. This severely
+    limits the agents' ability to exploit their degrees of freedom and causes all agents
+    to behave similarly. Implement a proper Jacobian-based inverse kinematics solver in
+    BaseAgent that:
+    - Takes a target (x, y) position for the end effector
+    - Uses numerical Jacobian computation and pseudo-inverse to solve for joint angles
+    - Includes damping/regularization for stability
+    - Works for both 2-link and 3-link arms
+    - Has configurable convergence tolerance and maximum iterations
+
+(3) Redesign agents to use position-based objectives instead of angle-based ones:
+    - PointingAgent: Should optimize orientation toward the sound source while ignoring
+      distance to target (distance is not subject to IK optimization pressure, though it
+      may change naturally as a side effect). Compute target position by projecting the
+      source direction onto a circle centered at base with radius equal to current
+      end effector distance, then solve IK to reach that position.
+    - ApproachingAgent: Should minimize distance to sound source while ignoring target
+      orientation (orientation is not subject to IK optimization pressure, though it may
+      change naturally as a side effect). Compute target position by moving toward the
+      source with an adaptive step size (respecting minimum distance constraint), then
+      solve IK to reach that position.
+    - TrackingAgent: Should optimize both objectives simultaneously. Compute a weighted
+      combination of the pointing target position and approaching target position, then
+      solve IK to reach the combined target.
+
+(4) Pass link_lengths to agents for IK computation. The IK solver needs link lengths to
+    compute forward kinematics. Either add link_lengths as a parameter to BaseAgent.__init__
+    (passed from config), or add a method to access them from the observation/environment.
+    Ensure the IK solver uses the actual link lengths from the configuration.
+
+(5) Consider additional improvements for better control:
+    - Add adaptive PD gains that scale with distance to target or link lengths
+    - For 3-link arms, consider null-space control to optimize secondary objectives
+    - Add velocity feedforward terms for smoother motion
+    - Consider joint limit constraints in the IK solver
+
+These changes will enable agents to properly differentiate their behaviors, exploit the full
+workspace, and scale effectively to 3-link arms while maintaining the shared code structure
+in BaseAgent.
+

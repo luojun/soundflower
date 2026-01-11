@@ -10,10 +10,12 @@ class ApproachingAgent(BaseAgent):
     Agent that only minimizes distance to the sound source.
 
     This agent moves the end effector closer to the sound source without
-    explicit orientation control. This is the behavior of the original HeuristicAgent.
+    explicit orientation control. Orientation may change naturally but is not
+    subject to IK optimization pressure.
     """
 
-    def __init__(self, kp: float = 5.0, kd: float = 0.5, max_torque: float = 10.0):
+    def __init__(self, kp: float = 5.0, kd: float = 0.5, max_torque: float = 10.0,
+                 link_lengths: np.ndarray = None, min_distance_to_source: float = 0.2):
         """
         Initialize approaching agent.
 
@@ -21,13 +23,19 @@ class ApproachingAgent(BaseAgent):
             kp: Proportional gain for PD controller
             kd: Derivative gain for PD controller
             max_torque: Maximum torque that can be applied (for clamping)
+            link_lengths: Array of link lengths for IK computation
+            min_distance_to_source: Minimum distance constraint (meters)
         """
-        super().__init__(kp=kp, kd=kd, max_torque=max_torque)
+        super().__init__(kp=kp, kd=kd, max_torque=max_torque, link_lengths=link_lengths)
+        self.min_distance_to_source = min_distance_to_source
         self.target_angle = 0.0
 
     def select_action(self, observation: Observation) -> np.ndarray:
         """
         Select action to minimize distance to sound source.
+
+        Minimizes distance while ignoring target orientation. Orientation may change
+        naturally but is not subject to IK optimization pressure.
 
         Args:
             observation: Current observation
@@ -35,13 +43,31 @@ class ApproachingAgent(BaseAgent):
         Returns:
             action: Torques to apply at each joint
         """
-        # Compute target angle for approaching (from end effector to source)
-        target_angle = self._compute_target_angle_for_approaching(observation)
-        self.target_angle = target_angle
+        if not observation.sound_source_positions:
+            return np.zeros(len(observation.arm_angles))
 
-        # Compute desired joint angles for approaching
-        desired_angles = self._compute_desired_joint_angles(
-            target_angle, observation.arm_angles
+        # Find nearest sound source
+        end_effector_pos = observation.end_effector_pos
+        distances = [np.linalg.norm(end_effector_pos - sp) for sp in observation.sound_source_positions]
+        nearest_idx = np.argmin(distances)
+        source_pos = observation.sound_source_positions[nearest_idx]
+
+        # Compute target position: move toward source with adaptive step size
+        direction = source_pos - end_effector_pos
+        distance_to_source = np.linalg.norm(direction)
+
+        if distance_to_source > self.min_distance_to_source:
+            # Move closer, but respect minimum distance constraint
+            # Adaptive step size: smaller steps when closer to minimum
+            step_size = min(0.1, distance_to_source - self.min_distance_to_source)
+            target_pos = end_effector_pos + (direction / distance_to_source) * step_size
+        else:
+            # Already at minimum distance, maintain current position
+            target_pos = end_effector_pos
+
+        # Solve IK to reach target position (minimizes distance, ignores orientation)
+        desired_angles = self._solve_inverse_kinematics(
+            target_pos, observation.arm_angles, self.link_lengths
         )
 
         # Compute PD torques
