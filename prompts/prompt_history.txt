@@ -189,3 +189,22 @@ point.
 ~
 Update logging so that the specific simulation instance (e.g. those launched in
 @demo_all) is identified according to the type of agent.
+
+~
+Normalize the reward signal to improve numerical stability and make it more suitable
+for reinforcement learning algorithms. Currently, the reward is the sound energy delta,
+which has very small numerical values (on the order of 1e-6 Joules per step).
+Implement reward normalization as follows:
+(1) Add a `reward_normalization_factor` parameter to @SoundFlowerConfig with a default
+value of None (auto-computed). In the `__post_init__` method, if this factor is None,
+automatically compute it as the theoretical maximum possible energy delta per step:
+max_intensity = sound_source_strength / (4π × min_distance_to_source²)
+max_energy_per_step = max_intensity × microphone_area × dt × 1.0
+reward_normalization_factor = max_energy_per_step
+(2) In @Environment.get_state(), normalize the reward by dividing sound_energy_delta
+by the reward_normalization_factor before returning it in the State. This will scale
+the reward to approximately [-1, 1] range (though it may exceed 1.0 if multiple
+sources align perfectly or if the agent moves from zero to maximum energy in a single
+step). Ensure the normalization factor is greater than zero before dividing to avoid
+division by zero errors.
+

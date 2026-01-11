@@ -69,6 +69,10 @@ class Environment:
         # Compute reward
         reward = observation.sound_energy_delta
 
+        # Normalize reward by maximum possible delta
+        if self.config.reward_normalization_factor > 0:
+            reward = reward / self.config.reward_normalization_factor
+
         return State(
             physics_state=physics_state,
             observation=observation,

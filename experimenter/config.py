@@ -42,6 +42,9 @@ class SoundFlowerConfig:
     sound_source_angular_velocity: float = 0.0  # Angular velocity for moving sound source (rad/s)
     sound_source_initial_angle: float = 0.0  # Initial angle of sound source (rad)
 
+    # Reward normalization
+    reward_normalization_factor: float = None  # Auto-computed if None
+
     def __post_init__(self):
         """Validate and adjust configuration."""
         # Ensure link_lengths and link_masses match num_links
@@ -56,6 +59,15 @@ class SoundFlowerConfig:
         self.link_lengths = [max(0.01, l) for l in self.link_lengths]
         self.link_masses = [max(0.01, m) for m in self.link_masses]
         self.joint_frictions = [max(0.0, f) for f in self.joint_frictions]
+
+        # Compute reward normalization factor if not set
+        if self.reward_normalization_factor is None:
+            # Maximum intensity at minimum distance
+            max_intensity = self.sound_source_strength / (4 * np.pi * self.min_distance_to_source ** 2)
+            # Maximum energy per step (perfect orientation, minimum distance)
+            max_energy_per_step = max_intensity * self.microphone_area * self.dt * 1.0
+            # Maximum possible delta (moving from 0 to max in one step)
+            self.reward_normalization_factor = max_energy_per_step
 
 
 def create_default_config(sound_source_angular_velocity: float = 0.2) -> SoundFlowerConfig:
