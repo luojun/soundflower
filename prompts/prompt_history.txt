@@ -167,3 +167,25 @@ cumulative sound energy remains physically plausible (i.e., total energy cannot
 exceed source_power × simulation_time, and should be significantly less due to
 distance attenuation, the 4π factor, and orientation effects).
 
+~
+Refactor and extend the agent system to support multiple tracking strategies:
+(1) Refactor @HeuristicAgent to extract shared components (PD controller, target angle
+computation, inverse kinematics) into a base class or shared utility functions that
+can be reused across multiple agent implementations.
+(2) Create three distinct agent classes with different tracking behaviors:
+    - PointingAgent: Only orients the microphone toward the sound source without
+      attempting to minimize distance (maintains current distance while pointing).
+    - ApproachingAgent: Only tries to minimize distance to the sound source
+      without explicit orientation control (the current HeuristicAgent behavior).
+    - TrackingAgent: Both points toward and minimizes distance to the sound source,
+      combining orientation and distance objectives.
+(3) Update @demo.py to use the TrackingAgent instead of the current HeuristicAgent.
+(4) Create @demo_all.py that runs all three agents simultaneously in separate
+simulation instances, each with its own logging and animation visualization, allowing
+side-by-side comparison of the different tracking strategies.
+~
+Update the logging of energy, reward and total reward to 4 positions after the decimal
+point.
+~
+Update logging so that the specific simulation instance (e.g. those launched in
+@demo_all) is identified according to the type of agent.

@@ -3,7 +3,7 @@
 import sys, time
 import pygame
 from environment import Environment
-from agents.heuristic_agent import HeuristicAgent
+from agents.tracking_agent import TrackingAgent
 from experimenter import create_default_config, Logger
 from experimenter.animator import Animator
 from soundflower import SoundFlower
@@ -32,8 +32,10 @@ def main(headless: bool = False):
 
     config = create_default_config(sound_source_angular_velocity=0.3)
     environment = Environment(config)
-    agent = HeuristicAgent()
-    logger = Logger()
+    agent = TrackingAgent()
+    # Identify logger by agent type
+    agent_name = agent.__class__.__name__
+    logger = Logger(agent_name=agent_name)
     animator = None
     if not headless:
         animator = Animator(config=config)
