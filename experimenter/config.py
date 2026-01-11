@@ -16,16 +16,18 @@ class SoundFlowerConfig:
     joint_frictions: List[float] = field(default_factory=lambda: [0.1, 0.1])  # Friction coefficient at each joint
 
     # Circle/environment configuration
-    circle_radius: float = 1.0  # Radius of the circle
+    circle_radius: float = 1.0  # Radius of the circle (meters)
 
     # Microphone configuration
     num_microphones: int = 1  # Number of microphones at arm tip
+    microphone_area: float = 0.0001  # Effective area of microphone (m², default 1 cm²)
     microphone_gain: float = 1.0  # Gain of microphones
 
     # Sound source configuration
     num_sound_sources: int = 1  # Number of sound sources
     sound_source_strength: float = 1.0  # Base strength of sound sources
     sound_attenuation_coeff: float = 1.0  # Coefficient for inverse square law (1/r^2)
+    min_distance_to_source: float = 0.2  # Minimum physical distance between microphone and sound source (meters)
 
     # Force
     max_torque: float = 10.0  # Maximum torque that can be applied at joints
@@ -77,6 +79,7 @@ def create_default_config(sound_source_angular_velocity: float = 0.2) -> SoundFl
         num_sound_sources=1,
         sound_source_strength=2.0,
         sound_attenuation_coeff=1.0,
+        min_distance_to_source=0.2,
         dt=0.01,
         max_torque=5.0,
         sound_source_angular_velocity=sound_source_angular_velocity,

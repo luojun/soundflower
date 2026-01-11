@@ -149,3 +149,21 @@ Update the code to
 4. Make sure logging of float values use only two digits after the decimal point;
 5. Remove _compute_distance_to_nearest_source and _compute_orientation_factors.
 
+~
+We need to fix the bug where the agent could accumulate more than 1 million Joules
+of energy within 160 seconds even when the sound source is at most 2 Watts.
+Concretely, (1) verify and ensure the 4π factor is explicitly included in the
+inverse square law calculation (intensity = P / (4πr²)); (2) verify and ensure
+the microphone surface area is set to a physically reasonable value (e.g., 1 cm²
+or 0.0001 m²) rather than an unrealistically large value; (3) enforce a minimum
+distance constraint of 0.2 meters between the microphone and any sound source as
+a physical limit, meaning the arm's end effector position must be constrained
+such that it cannot physically reach within 0.2 meters of any sound source
+position, both during initialization and throughout the simulation; (4) implement
+this physical constraint by modifying the arm's reachable workspace or by
+constraining the forward kinematics to respect this minimum distance; and (5)
+implement or enhance the test in test_energy_plausibility.py to verify that
+cumulative sound energy remains physically plausible (i.e., total energy cannot
+exceed source_power × simulation_time, and should be significantly less due to
+distance attenuation, the 4π factor, and orientation effects).
+

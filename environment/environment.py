@@ -115,17 +115,20 @@ class Environment:
         # Compute sound intensity and energy from all sources (vectorized)
         sound_intensity = 0.0
         sound_energy = 0.0
-        unit_area = 1.0
+        microphone_area = self.config.microphone_area
 
         if len(sound_source_positions) > 0:
             directions = sound_source_positions - end_effector_pos  # (n_sources, 2)
             distances = np.linalg.norm(directions, axis=1)  # (n_sources,)
-            distances = np.maximum(distances, 1e-6)  # Avoid division by zero
+            # Use config minimum distance (physical constraint should prevent violations, but
+            # this ensures calculation safety even if constraint hasn't been applied yet)
+            min_distance = self.config.min_distance_to_source
+            distances = np.maximum(distances, min_distance)
 
             # Compute sound intensities for all sources (vectorized)
-            # Inverse square law: intensity ∝ 1/r^2
+            # Inverse square law: intensity = P / (4πr²) where P is power
             source_intensities = (self.physics_engine.sound_propagation.attenuation_coeff *
-                                 self.config.sound_source_strength / (distances ** 2))  # (n_sources,)
+                                 self.config.sound_source_strength / (4 * np.pi * distances ** 2))  # (n_sources,)
             source_intensities *= self.config.microphone_gain
 
             sound_intensity = np.sum(source_intensities)
@@ -140,7 +143,7 @@ class Environment:
             orientation_factors = np.maximum(0.0, np.cos(angle_diffs))  # (n_sources,)
 
             # Energy = Intensity × Area × Time × Orientation_factor
-            source_energies = (source_intensities * unit_area * self.config.dt *
+            source_energies = (source_intensities * microphone_area * self.config.dt *
                               orientation_factors)  # (n_sources,)
             sound_energy = np.sum(source_energies)
 
@@ -186,10 +189,14 @@ class Environment:
         if len(sound_source_positions) > 0:
             directions = sound_source_positions - end_effector_pos  # (n_sources, 2)
             distances = np.linalg.norm(directions, axis=1)  # (n_sources,)
-            distances = np.maximum(distances, 1e-6)  # Avoid division by zero
+            # Use config minimum distance (physical constraint should prevent violations, but
+            # this ensures calculation safety even if constraint hasn't been applied yet)
+            min_distance = self.config.min_distance_to_source
+            distances = np.maximum(distances, min_distance)
 
+            # Inverse square law: intensity = P / (4πr²) where P is power
             source_intensities = (self.physics_engine.sound_propagation.attenuation_coeff *
-                                 self.config.sound_source_strength / (distances ** 2))  # (n_sources,)
+                                 self.config.sound_source_strength / (4 * np.pi * distances ** 2))  # (n_sources,)
             source_intensities *= self.config.microphone_gain
             sound_intensity = np.sum(source_intensities)
 
@@ -203,6 +210,6 @@ class Environment:
             'circle_radius': self.config.circle_radius,
             'arm_state': physics_state.arm_state,
             'sound_intensity': sound_intensity,
-            'sound_energy': sound_intensity * 1.0 * self.config.dt  # Unit area × dt for rendering
+            'sound_energy': sound_intensity * self.config.microphone_area * self.config.dt  # Area × dt for rendering
         }
 

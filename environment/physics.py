@@ -143,8 +143,8 @@ class SoundPropagation:
         if distance < 1e-6:
             distance = 1e-6
 
-        # Inverse square law: intensity ∝ 1/r^2
-        sound_intensity = self.attenuation_coeff * source_strength / (distance ** 2)
+        # Inverse square law: intensity = P / (4πr²) where P is power
+        sound_intensity = self.attenuation_coeff * source_strength / (4 * np.pi * distance ** 2)
 
         return sound_intensity
 
