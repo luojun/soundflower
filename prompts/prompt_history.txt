@@ -208,3 +208,31 @@ sources align perfectly or if the agent moves from zero to maximum energy in a s
 step). Ensure the normalization factor is greater than zero before dividing to avoid
 division by zero errors.
 
+~
+Add a plotter component for real-time visualization of simulation metrics, following
+the design pattern of @logger and @animator. The plotter should:
+(1) Use matplotlib for plotting and follow the same interface pattern as logger/animator
+    (with __init__, start(), step(), and finish() methods) and integrate similarly
+    into the simulation loop in @soundflower.py.
+(2) Be designed as a shared instance that can track multiple simulation instances
+    simultaneously (e.g., in @demo_all.py where multiple agents run in parallel).
+    The plotter should accept an agent_name parameter to identify which simulation
+    instance each data point belongs to.
+(3) Create four separate plots that update in real-time as simulations progress:
+    - Per-step reward (normalized)
+    - Per-step sound energy (raw, in Joules)
+    - Cumulative reward (sum of normalized rewards)
+    - Cumulative sound energy (sum of raw energy, in Joules)
+(4) For each plot, display multiple time series corresponding to different agents
+    (e.g., PointingAgent, ApproachingAgent, TrackingAgent). Use distinct line colors
+    and line styles (solid, dashed, dotted) to differentiate between agent types.
+    Maintain a consistent color/style mapping across all four plots for the same agent.
+(5) Handle normalization appropriately: use normalized reward values (already computed
+    in the environment) for reward plots, and raw energy values for energy plots.
+(6) Update plots incrementally as new data arrives (not batch updates at the end).
+    Use matplotlib's interactive mode (plt.ion()) and refresh the plots at a
+    configurable frequency (similar to animation_frequency in config). Ensure plots
+    remain responsive and visible throughout the simulation run.
+~
+Pleaes also update @demo to use @plotter.
+

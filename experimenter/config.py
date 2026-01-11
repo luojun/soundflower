@@ -37,6 +37,7 @@ class SoundFlowerConfig:
     control_frequency: float = 10.0  # Agent control frequency in Hz (0.1-100)
     logging_frequency: float = 1.0 # Logging freqency in Hz (0.01-100)
     animation_frequency: float = 10.0  # Animation frequncy in Hz (0.0-100)
+    plotting_frequency: float = 5.0  # Plotting frequency in Hz (0.0-100)
 
     # Sound source behavior
     sound_source_angular_velocity: float = 0.0  # Angular velocity for moving sound source (rad/s)

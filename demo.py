@@ -6,6 +6,7 @@ from environment import Environment
 from agents.tracking_agent import TrackingAgent
 from experimenter import create_default_config, Logger
 from experimenter.animator import Animator
+from experimenter.plotter import Plotter
 from soundflower import SoundFlower
 
 
@@ -33,14 +34,17 @@ def main(headless: bool = False):
     config = create_default_config(sound_source_angular_velocity=0.3)
     environment = Environment(config)
     agent = TrackingAgent()
-    # Identify logger by agent type
+    # Identify logger and plotter by agent type
     agent_name = agent.__class__.__name__
     logger = Logger(agent_name=agent_name)
     animator = None
+    plotter = None
     if not headless:
         animator = Animator(config=config)
+        # Create non-shared plotter for single-agent demo
+        plotter = Plotter(config, agent_name=agent_name, shared=False)
 
-    soundflower = SoundFlower(config, environment, agent, logger=logger, animator=animator)
+    soundflower = SoundFlower(config, environment, agent, logger=logger, animator=animator, plotter=plotter)
 
     soundflower.start()
     paused = False

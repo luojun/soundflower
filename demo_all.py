@@ -10,6 +10,7 @@ from agents.pointing_agent import PointingAgent
 from agents.approaching_agent import ApproachingAgent
 from agents.tracking_agent import TrackingAgent
 from experimenter import create_default_config, Logger
+from experimenter.plotter import Plotter
 from soundflower import SoundFlower
 
 
@@ -26,6 +27,12 @@ class MultiAgentDemo:
         self.headless = headless
         self.config = create_default_config(sound_source_angular_velocity=0.3)
 
+        # Create shared plotter instance for all agents
+        shared_plotter = None
+        if not headless:
+            # Create first plotter instance (will become shared)
+            shared_plotter = Plotter(self.config, agent_name=None, shared=True)
+
         # Create three separate environments and agents
         self.soundflowers = []
         agent_configs = [
@@ -39,9 +46,14 @@ class MultiAgentDemo:
             agent = agent_class()
             logger = Logger(agent_name=agent_name)
 
+            # Create plotter instance for this agent (will use shared instance)
+            plotter = None
+            if shared_plotter:
+                plotter = Plotter(self.config, agent_name=agent_name, shared=True)
+
             soundflower = SoundFlower(
                 self.config, environment, agent,
-                logger=logger, animator=None  # We'll handle rendering ourselves
+                logger=logger, animator=None, plotter=plotter  # We'll handle rendering ourselves
             )
             soundflower.agent_name = agent_name
             soundflower.agent_color = color

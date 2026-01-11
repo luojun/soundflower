@@ -5,6 +5,7 @@ from typing import Optional, Callable, Dict, Any
 from environment import Environment
 from experimenter.animator import Animator
 from experimenter.logger import Logger
+from experimenter.plotter import Plotter
 
 
 class SoundFlower:
@@ -16,16 +17,18 @@ class SoundFlower:
     - Agent (decision making)
     - Logger (logging, optional)
     - Animator (animation, optional)
+    - Plotter (plotting, optional)
 
     Runs at configurable frequencies:
     - Environment: physics runs as fast as possible with a configurable time step size <= 0.01s
     - agent: runs at control_frequency (0.1-100 Hz) in simulated time
     - Logger: runs at logging_frequency (0.01-100 Hz, optional) in simulated time
     - Animation: runs at animation_frequency (0.01-100 Hz, optional) in simulated time
+    - Plotting: runs at plotting_frequency (0.0-100 Hz, optional) in simulated time
     """
 
     def __init__(self, config, environment: Environment, agent, logger: Optional[Logger] = None,
-                 animator: Optional[Animator] = None) -> None:
+                 animator: Optional[Animator] = None, plotter: Optional[Plotter] = None) -> None:
         """
         Initialize runner.
 
@@ -35,12 +38,14 @@ class SoundFlower:
             agent: Agent with async select_action method
             logger: Logger with async logging
             animator: Animator with async animation
+            plotter: Plotter for real-time metrics visualization
         """
         self.config = config
         self.environment = environment
         self.agent = agent
         self.logger = logger
         self.animator = animator
+        self.plotter = plotter
 
         if self.agent:
             self.control_period = 1.0 / config.control_frequency
@@ -49,6 +54,8 @@ class SoundFlower:
             self.logging_period = 1.0 / config.logging_frequency
         if self.animator:
             self.animation_period = 1.0 / config.animation_frequency
+        if self.plotter:
+            self.plotting_period = 1.0 / config.plotting_frequency
 
         self.simulation_time = 0.0
         self.step_count = 0
@@ -62,9 +69,13 @@ class SoundFlower:
         if self.animator:
             self.animator.start()
 
+        if self.plotter:
+            self.plotter.start()
+
         self.time_since_last_aciton = 0.0
         self.time_since_last_log = 0.0
         self.time_since_last_frame = 0.0
+        self.time_since_last_plot = 0.0
 
 
     def step(self):
@@ -98,6 +109,19 @@ class SoundFlower:
                 self.animator.step(self.environment)
                 self.time_since_last_frame = 0.0
 
+        if self.plotter:
+            self.time_since_last_plot += self.config.dt
+
+            if self.time_since_last_plot >= self.plotting_period:
+                self.plotter.step(
+                    self.step_count,
+                    environment_state.reward,
+                    environment_state.observation.sound_energy,
+                    self.cumulative_reward,
+                    self.cumulative_sound_energy
+                )
+                self.time_since_last_plot = 0.0
+
         self.simulation_time += self.config.dt
         self.step_count += 1
 
@@ -124,10 +148,23 @@ class SoundFlower:
             self.animator.step(self.environment)
             self.time_since_last_frame = 0.0
 
+        if self.plotter:
+            environment_state = self.environment.get_state()
+            self.plotter.step(
+                self.step_count,
+                environment_state.reward,
+                environment_state.observation.sound_energy,
+                self.cumulative_reward,
+                self.cumulative_sound_energy
+            )
+            self.time_since_last_plot = 0.0
 
     def finish(self):
         if self.animator:
             self.animator.finish()
+
+        if self.plotter:
+            self.plotter.finish()
 
         if self.logger:
             self.logger.log_final(self)
