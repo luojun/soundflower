@@ -289,3 +289,42 @@ These changes will enable agents to properly differentiate their behaviors, expl
 workspace, and scale effectively to 3-link arms while maintaining the shared code structure
 in BaseAgent.
 
+~
+Fix a critical bug in the inverse kinematics solver where the first link (and potentially other
+links) fails to move when its angle is between 180 and 360 degrees (i.e., pointing westward
+through eastward). This bug affects all three agent types (PointingAgent, ApproachingAgent,
+TrackingAgent) and prevents proper arm control in certain orientations. The root causes are:
+
+(1) Angle clamping during IK iterations: In `_solve_inverse_kinematics` in @BaseAgent, angles
+    are clamped to [-π, π] after each iteration (line 210: `angles = np.clip(angles, -np.pi, np.pi)`).
+    This creates discontinuities when angles need to cross the ±π boundary. For example, if the
+    current angle is 3.0 rad (172°) and needs to evolve to 3.5 rad (200°), the clamp wraps it
+    to -2.78 rad, breaking the iterative convergence process.
+
+(2) Missing angle wrapping in PD controller: In `_compute_pd_torques` in @BaseAgent, angle errors
+    are computed without wrapping (line 229: `angle_errors = desired_angles - current_angles`).
+    When angles wrap around the ±π boundary, this produces incorrect error values. For example,
+    if desired_angle is -2.78 rad and current_angle is 3.0 rad, the error is -5.78 rad instead
+    of the correct wrapped value of approximately 0.5 rad.
+
+Implement the following fixes:
+
+(1) Remove clamping during IK iterations: In `_solve_inverse_kinematics`, remove the `np.clip`
+    call inside the iteration loop (line 210). Instead, normalize angles to [-π, π] only at the
+    end of the function, after all iterations complete, using `angles = np.arctan2(np.sin(angles),
+    np.cos(angles))`. This allows angles to evolve naturally during iterations without artificial
+    discontinuities.
+
+(2) Normalize input angles at IK start: At the beginning of `_solve_inverse_kinematics`, after
+    copying `current_angles` to `angles`, normalize the initial angles to [-π, π] for consistency:
+    `angles = np.arctan2(np.sin(angles), np.cos(angles))`.
+
+(3) Add angle wrapping to PD controller: In `_compute_pd_torques`, after computing `angle_errors`,
+    wrap the errors to [-π, π] using `angle_errors = np.arctan2(np.sin(angle_errors),
+    np.cos(angle_errors))`. This ensures that angle errors are always computed as the shortest
+    angular distance, correctly handling wrap-around cases.
+
+These fixes will ensure that the IK solver can handle all angle ranges correctly and that the
+PD controller computes appropriate torques regardless of the current joint angles' positions
+relative to the ±π boundary.
+

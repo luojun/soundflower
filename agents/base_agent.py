@@ -171,6 +171,8 @@ class BaseAgent(ABC):
             desired_angles: Joint angles to reach target position
         """
         angles = current_angles.copy()
+        # Normalize input angles to [-π, π] for consistency
+        angles = np.arctan2(np.sin(angles), np.cos(angles))
 
         for iteration in range(max_iterations):
             # Forward kinematics
@@ -206,8 +208,11 @@ class BaseAgent(ABC):
                         gradient = np.dot(error, jacobian[:, i]) / np.linalg.norm(jacobian[:, i])**2
                         angles[i] += 0.1 * gradient
 
-            # Clamp angles to reasonable range
-            angles = np.clip(angles, -np.pi, np.pi)
+            # Don't clamp during iterations - allow angles to evolve naturally
+            # Normalization will happen at the end to avoid discontinuities
+
+        # Normalize angles to [-π, π] at the end
+        angles = np.arctan2(np.sin(angles), np.cos(angles))
 
         return angles
 
@@ -227,6 +232,8 @@ class BaseAgent(ABC):
         """
         # Compute angle errors
         angle_errors = desired_angles - current_angles
+        # Wrap errors to [-π, π] to handle angle wrap-around
+        angle_errors = np.arctan2(np.sin(angle_errors), np.cos(angle_errors))
 
         # Proportional term
         proportional_torques = self.kp * angle_errors
