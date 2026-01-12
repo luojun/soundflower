@@ -2,7 +2,7 @@
 
 ##### Simulation Performance
 
-- [ ] Difference instances of Soundflower (agent-body-environment triplet) on different threads or processes.
+- [ ] Instances of Soundflower (agent-body-environment triplet) on different threads or processes.
 - [ ] Faster inverse kinematics solver?
 - [ ] Faster physics engine? (Note: burden is from "collision check" -- minimum distance to a sound source.)
 
@@ -11,14 +11,16 @@
 - [ ] Geometric observations: make body configuration observable to accommodate configuration changes.
 - [ ] Physical observations: joint angle (relative to "up" link), joint angular velocity, and joint angular acceleration.
 - [ ] Action observations: motor commands (torque or angular jerk) -- "efference copy".
-- [ ] Action: angular jerk instead of torque?
+- [ ] Action: angular jerk instead of torque? (TAI!)
 
 ##### Agent
 
 - [ ] Classical model-based agent: uses both geometric observations and physical observations.
-- [ ] Baseline model-free RL agent: uses only physical observations.
-- [ ] Continual model-free RL agent: uses only physical observations.
-- [ ] RL agents with the "sensorimotor abstraction architecture".
+- [ ] Baseline model-free RL agent: uses only physical observations and action observation.
+- [ ] Continual model-free RL agent: uses only physical observations and action observation.
+- [ ] Model-free RL agents with the "sensorimotor abstraction architecture".
+- [ ] Exploration: link to the OaK architecture.
+- [ ] Exploration: Soundflower as a computational neuroscience "animal model" for sensorimotor abstraction.
 
 ##### Body+Environment Variability
 
@@ -26,13 +28,15 @@
 - [ ] Variation in radius of sound source orbit.
 - [ ] Variation in number of sound sources.
 - [ ] Variation in friction of joints.
-- [ ] Variation in length of body link.
+- [ ] Variation in range of joint rotation.
+- [ ] Variation in length of body links.
 - [ ] Level of observation noise.
 - [ ] Level of body+environment dynamics noise.
 
 ##### UI
 
-- [ ] A "conductor" interface that changes the range of the body+environment variability.
+- [ ] "Conductor" GUI for controlling body+environment variability.
+- [ ] "Conductor" keyboard UI for controlling body+environment variability.
 
 ##### Experiment and Evaluation
 

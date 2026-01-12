@@ -1,18 +1,17 @@
 ### The Sound Flower
 
-Exploration in sensorimotor abstraction for embodied RL Agent.
+Exploration in sensorimotor abstraction for embodied RL agents. 
+Reminiscent of "super-sunflower" in chapter 6 of [On the Origin of Objects](https://mitpress.mit.edu/9780262692090/on-the-origin-of-objects/) as well as [Rotato](https://www.semanticscholar.org/paper/Around-the-World-in-80-Steps-Or-How-to-Represent-Milligan-Milligan/9f517de67e4ad87aba2239b646ec67e96de00a8e).
 
-Reminiscent of the [Super-Sunflower](https://mitpress.mit.edu/9780262692090/on-the-origin-of-objects/) as well as Rotato (https://www.semanticscholar.org/paper/Around-the-World-in-80-Steps-Or-How-to-Represent-Milligan-Milligan/9f517de67e4ad87aba2239b646ec67e96de00a8e).
+##### Overview
 
-## Overview
-
-![Animation screenshot with 6 instances running](/animation.png)
+![Animation screenshot with 6 instances running](/assets/animation.png)
 
 Sound Flower is a 2D robotic arm reinforcement learning environment where an agent controls a multi-link robotic arm to track sound sources. The arm is mounted at the center of a circle, with microphones at its tip. The agent receives rewards based on the sound energy captured by the microphones.
 
-![Performance plots for 6 instances](/plots.png)
+![Performance plots for 6 instances](/assets/plots.png)
 
-## Features
+##### Features
 
 - **Multi-link robotic arm**: Configurable 1-3 DOF arm with physics simulation
 - **Sound propagation**: Inverse square law sound propagation from sources
@@ -21,7 +20,7 @@ Sound Flower is a 2D robotic arm reinforcement learning environment where an age
 - **Heuristic agent**: Included simple heuristic agent for demonstration
 - **Animation**: Real-time animation package for visualizing simulation
 
-## Installation
+##### Installation
 
 ```bash
 pip install -r requirements.txt
@@ -41,11 +40,11 @@ Run the demo in headless mode (no animation, faster execution):
 python3 demo.py --headless # or demo_all.py --headless
 ```
 
-## Heuristic Agents
+##### Heuristic Agents
 
 The included heuristic agents use a simple PD controller to point the arm toward the nearest sound source. They can be used as baselines or starting points for more sophisticated agents.
 
 
-## License
+##### License
 
 This project is provided as-is for research and educational purposes.
