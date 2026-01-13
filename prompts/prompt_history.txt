@@ -355,3 +355,27 @@ versions of the environment.
 Do not forget to update plotting if necessary to appropriately plot the performance curves
 for all 6 instances simultaneously.
 
+~
+Optimize matplotlib plotting performance in @experimenter/plotter/plotter.py by replacing
+full redraws with incremental updates. Current implementation clears and redraws all plots
+every update (5 Hz default), causing 50-200ms delays.
+
+Implement the following optimizations:
+(1) Replace ax.clear() + plot() with line objects that use set_data() for incremental updates.
+Store line objects in _line_objects dict keyed by agent_name and plot_type. Create lines on
+first data point, then update with set_data() thereafter.
+(2) Replace list-of-tuples data storage with numpy arrays (Tuple[np.ndarray, np.ndarray] for
+x/y pairs) to avoid zip(*...) overhead. Limit data to MAX_DATA_POINTS=2000 per agent using
+rolling window (keep last N points).
+(3) Remove plt.tight_layout() from _update_plots() - call it only once in _initialize_plots().
+(4) Replace canvas.draw() with canvas.draw_idle() for non-blocking updates, keeping
+flush_events() only if needed.
+(5) Update axes limits efficiently by computing min/max from current data arrays instead of
+autoscaling.
+(6) Only update legends when new agents are added (track _known_agents set,
+set _legend_needs_update flag).
+(7) Lower default plotting_frequency from 5.0 Hz to 0.5 Hz in @experimenter/config.py to
+reduce update frequency.
+(8) Increase legend font size from 7 to 10 and adjust ncol if needed for readability.
+
+This should provide 20-100x speedup for plotting operations while maintaining visual quality.

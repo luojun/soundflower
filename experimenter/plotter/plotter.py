@@ -3,7 +3,7 @@
 import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Tuple
 from collections import defaultdict
 import threading
 
@@ -39,11 +39,19 @@ class Plotter:
                     Plotter._shared_instance = self
                     self._is_shared = True
                     self._initialize_plots()
-                    # Initialize data storage
-                    self._step_rewards: Dict[str, List[tuple]] = defaultdict(list)
-                    self._step_energies: Dict[str, List[tuple]] = defaultdict(list)
-                    self._cumulative_rewards: Dict[str, List[tuple]] = defaultdict(list)
-                    self._cumulative_energies: Dict[str, List[tuple]] = defaultdict(list)
+                    # Initialize data storage as numpy arrays (x, y tuples)
+                    self._step_rewards: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
+                    self._step_energies: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
+                    self._cumulative_rewards: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
+                    self._cumulative_energies: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
+                    # Line objects for incremental updates
+                    self._line_objects: Dict[str, Dict[str, Optional[plt.Line2D]]] = defaultdict(lambda: {
+                        'reward': None, 'energy': None, 'cum_reward': None, 'cum_energy': None
+                    })
+                    # Update tracking
+                    self._known_agents = set()
+                    self._legend_needs_update = False
+                    self.MAX_DATA_POINTS = 2000
                 else:
                     # Use existing shared instance - store reference
                     shared_inst = Plotter._shared_instance
@@ -57,15 +65,24 @@ class Plotter:
                     self.ax_cum_reward = shared_inst.ax_cum_reward
                     self.ax_cum_energy = shared_inst.ax_cum_energy
                     # Note: agent_name is already set above, and step() will forward to shared instance
+                    # Data storage and line objects are on shared_inst, accessed via forwarding
                     return
         else:
             self._is_shared = False
             self._initialize_plots()
-            # Initialize data storage
-            self._step_rewards: Dict[str, List[tuple]] = defaultdict(list)
-            self._step_energies: Dict[str, List[tuple]] = defaultdict(list)
-            self._cumulative_rewards: Dict[str, List[tuple]] = defaultdict(list)
-            self._cumulative_energies: Dict[str, List[tuple]] = defaultdict(list)
+            # Initialize data storage as numpy arrays (x, y tuples)
+            self._step_rewards: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
+            self._step_energies: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
+            self._cumulative_rewards: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
+            self._cumulative_energies: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
+            # Line objects for incremental updates
+            self._line_objects: Dict[str, Dict[str, Optional[plt.Line2D]]] = defaultdict(lambda: {
+                'reward': None, 'energy': None, 'cum_reward': None, 'cum_energy': None
+            })
+            # Update tracking
+            self._known_agents = set()
+            self._legend_needs_update = False
+            self.MAX_DATA_POINTS = 2000
 
         # Agent color and style mapping
         # Base colors for agent types
@@ -135,6 +152,7 @@ class Plotter:
         self.ax_cum_energy.grid(True, alpha=0.3)
 
         plt.tight_layout()
+        self._layout_fixed = True  # Layout fixed, don't recalculate
         plt.show(block=False)
 
     def start(self):
@@ -171,83 +189,107 @@ class Plotter:
         if self.agent_name is None:
             return
 
-        # Store data
-        self._step_rewards[self.agent_name].append((step_count, reward))
-        self._step_energies[self.agent_name].append((step_count, sound_energy))
-        self._cumulative_rewards[self.agent_name].append((step_count, cumulative_reward))
-        self._cumulative_energies[self.agent_name].append((step_count, cumulative_sound_energy))
+        # Track new agents
+        if self.agent_name not in self._known_agents:
+            self._known_agents.add(self.agent_name)
+            self._legend_needs_update = True
 
-        # Update plots
+        # Append data to numpy arrays with rolling window limit
+        self._append_data(self.agent_name, step_count, reward, sound_energy,
+                         cumulative_reward, cumulative_sound_energy)
+
+        # Update plots incrementally
         self._update_plots()
 
+    def _append_data(self, agent_name: str, step: int, reward: float,
+                    energy: float, cum_reward: float, cum_energy: float):
+        """Append data point with rolling window limit."""
+        def append_limited(arr_tuple, x, y):
+            x_arr, y_arr = arr_tuple
+            if len(x_arr) == 0:
+                return np.array([x], dtype=np.float64), np.array([y], dtype=np.float64)
+            x_new = np.append(x_arr, x)
+            y_new = np.append(y_arr, y)
+            if len(x_new) > self.MAX_DATA_POINTS:
+                return x_new[-self.MAX_DATA_POINTS:], y_new[-self.MAX_DATA_POINTS:]
+            return x_new, y_new
+
+        self._step_rewards[agent_name] = append_limited(
+            self._step_rewards[agent_name], step, reward)
+        self._step_energies[agent_name] = append_limited(
+            self._step_energies[agent_name], step, energy)
+        self._cumulative_rewards[agent_name] = append_limited(
+            self._cumulative_rewards[agent_name], step, cum_reward)
+        self._cumulative_energies[agent_name] = append_limited(
+            self._cumulative_energies[agent_name], step, cum_energy)
+
     def _update_plots(self):
-        """Update all plots with current data."""
-        # Clear axes
-        self.ax_reward.clear()
-        self.ax_energy.clear()
-        self.ax_cum_reward.clear()
-        self.ax_cum_energy.clear()
+        """Update plots incrementally using set_data()."""
+        # Update each plot type incrementally
+        self._update_plot('reward', self.ax_reward, self._step_rewards)
+        self._update_plot('energy', self.ax_energy, self._step_energies)
+        self._update_plot('cum_reward', self.ax_cum_reward, self._cumulative_rewards)
+        self._update_plot('cum_energy', self.ax_cum_energy, self._cumulative_energies)
 
-        # Redraw titles and labels
-        self.ax_reward.set_title('Per-Step Reward (Normalized)')
-        self.ax_reward.set_xlabel('Step')
-        self.ax_reward.set_ylabel('Reward')
-        self.ax_reward.grid(True, alpha=0.3)
+        # Update axes limits efficiently
+        self._update_axes_limits()
 
-        self.ax_energy.set_title('Per-Step Sound Energy')
-        self.ax_energy.set_xlabel('Step')
-        self.ax_energy.set_ylabel('Energy (J)')
-        self.ax_energy.grid(True, alpha=0.3)
+        # Update legend only if needed
+        if self._legend_needs_update:
+            self._update_legend()
+            self._legend_needs_update = False
 
-        self.ax_cum_reward.set_title('Cumulative Reward (Normalized)')
-        self.ax_cum_reward.set_xlabel('Step')
-        self.ax_cum_reward.set_ylabel('Cumulative Reward')
-        self.ax_cum_reward.grid(True, alpha=0.3)
+        # Refresh display (non-blocking)
+        self.fig.canvas.draw_idle()
+        self.fig.canvas.flush_events()
 
-        self.ax_cum_energy.set_title('Cumulative Sound Energy')
-        self.ax_cum_energy.set_xlabel('Step')
-        self.ax_cum_energy.set_ylabel('Cumulative Energy (J)')
-        self.ax_cum_energy.grid(True, alpha=0.3)
+    def _update_plot(self, plot_type: str, ax, data_dict: Dict):
+        """Update a single plot incrementally."""
+        for agent_name in data_dict.keys():
+            x_data, y_data = data_dict[agent_name]
+            if len(x_data) == 0:
+                continue
 
-        # Plot data for each agent
-        for agent_name in self._step_rewards.keys():
             color = self._get_agent_color(agent_name)
             style = self._get_agent_style(agent_name)
 
-            # Per-step reward
-            if self._step_rewards[agent_name]:
-                steps, rewards = zip(*self._step_rewards[agent_name])
-                self.ax_reward.plot(steps, rewards, color=color, linestyle=style,
-                                   label=agent_name, linewidth=1.5)
+            line = self._line_objects[agent_name][plot_type]
+            if line is None:
+                # Create line on first update
+                line, = ax.plot(x_data, y_data, color=color, linestyle=style,
+                               label=agent_name, linewidth=1.5)
+                self._line_objects[agent_name][plot_type] = line
+            else:
+                # Update existing line data
+                line.set_data(x_data, y_data)
 
-            # Per-step energy
-            if self._step_energies[agent_name]:
-                steps, energies = zip(*self._step_energies[agent_name])
-                self.ax_energy.plot(steps, energies, color=color, linestyle=style,
-                                  label=agent_name, linewidth=1.5)
+    def _update_axes_limits(self):
+        """Update axes limits efficiently."""
+        # Update limits for each axis based on current data
+        for ax, data_dict in [
+            (self.ax_reward, self._step_rewards),
+            (self.ax_energy, self._step_energies),
+            (self.ax_cum_reward, self._cumulative_rewards),
+            (self.ax_cum_energy, self._cumulative_energies)
+        ]:
+            all_x = []
+            all_y = []
+            for x_arr, y_arr in data_dict.values():
+                if len(x_arr) > 0:
+                    all_x.extend(x_arr)
+                    all_y.extend(y_arr)
 
-            # Cumulative reward
-            if self._cumulative_rewards[agent_name]:
-                steps, cum_rewards = zip(*self._cumulative_rewards[agent_name])
-                self.ax_cum_reward.plot(steps, cum_rewards, color=color, linestyle=style,
-                                       label=agent_name, linewidth=1.5)
+            if all_x and all_y:
+                x_min, x_max = min(all_x), max(all_x)
+                y_min, y_max = min(all_y), max(all_y)
+                y_range = y_max - y_min if y_max != y_min else 1.0
+                ax.set_xlim(x_min, x_max)
+                ax.set_ylim(y_min - 0.05 * y_range, y_max + 0.05 * y_range)
 
-            # Cumulative energy
-            if self._cumulative_energies[agent_name]:
-                steps, cum_energies = zip(*self._cumulative_energies[agent_name])
-                self.ax_cum_energy.plot(steps, cum_energies, color=color, linestyle=style,
-                                       label=agent_name, linewidth=1.5)
-
-        # Add legends (smaller font for 6 instances)
-        self.ax_reward.legend(loc='best', fontsize=7, ncol=2)
-        self.ax_energy.legend(loc='best', fontsize=7, ncol=2)
-        self.ax_cum_reward.legend(loc='best', fontsize=7, ncol=2)
-        self.ax_cum_energy.legend(loc='best', fontsize=7, ncol=2)
-
-        # Refresh display
-        plt.tight_layout()
-        self.fig.canvas.draw()
-        self.fig.canvas.flush_events()
+    def _update_legend(self):
+        """Update legend only when agents change."""
+        for ax in [self.ax_reward, self.ax_energy, self.ax_cum_reward, self.ax_cum_energy]:
+            ax.legend(loc='best', fontsize=10, ncol=2)
 
     def finish(self):
         """Finish plotting (keep plots open)."""
