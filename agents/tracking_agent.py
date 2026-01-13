@@ -21,7 +21,7 @@ class TrackingAgent(BaseAgent):
         Args:
             kp: Proportional gain for PD controller
             kd: Derivative gain for PD controller
-            max_torque: Maximum torque that can be applied (for clamping)
+            max_torque: Maximum torque that can be applied (for clipping)
             pointing_weight: Weight for pointing objective (0-1).
                            Distance minimization weight is (1 - pointing_weight)
             link_lengths: Array of link lengths for IK computation

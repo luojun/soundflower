@@ -31,6 +31,8 @@ class SoundFlowerConfig:
 
     # Force
     max_torque: float = 10.0  # Maximum torque that can be applied at joints
+    repulsion_coefficient: float = 10.0  # Spring coefficient for soft minimum distance constraint (reduced from 50.0 for stability)
+    repulsion_damping: float = 5.0  # Damping coefficient for soft minimum distance constraint (reduced from 10.0 for stability)
 
     # Simulation frequencies
     dt: float = 0.01  # Time step for simulation

@@ -22,7 +22,7 @@ class ApproachingAgent(BaseAgent):
         Args:
             kp: Proportional gain for PD controller
             kd: Derivative gain for PD controller
-            max_torque: Maximum torque that can be applied (for clamping)
+            max_torque: Maximum torque that can be applied (for clipping)
             link_lengths: Array of link lengths for IK computation
         """
         super().__init__(kp=kp, kd=kd, max_torque=max_torque, link_lengths=link_lengths)

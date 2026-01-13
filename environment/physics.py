@@ -91,13 +91,11 @@ class ArmPhysics:
 
         Args:
             state: Current arm state
-            torques: Torques applied at each joint
+            torques: Torques applied at each joint (already clipped at physics boundary)
 
         Returns:
             new_state: Updated arm state
         """
-        # Clamp torques
-        torques = np.clip(torques, -10.0, 10.0)
 
         # Compute accelerations
         angular_accelerations = self.compute_dynamics(state, torques)

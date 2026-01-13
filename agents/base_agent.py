@@ -16,7 +16,7 @@ class BaseAgent(ABC):
         Args:
             kp: Proportional gain for PD controller
             kd: Derivative gain for PD controller
-            max_torque: Maximum torque that can be applied (for clamping)
+            max_torque: Maximum torque that can be applied (for clipping)
             link_lengths: Array of link lengths for IK computation (required for position-based IK)
         """
         self.kp = kp
@@ -264,7 +264,7 @@ class BaseAgent(ABC):
                         gradient = np.dot(augmented_error, augmented_jacobian[:, i]) / np.linalg.norm(augmented_jacobian[:, i])**2
                         angles[i] += 0.1 * gradient
 
-            # Don't clamp during iterations - allow angles to evolve naturally
+            # Don't clip during iterations - allow angles to evolve naturally
             # Normalization will happen at the end to avoid discontinuities
 
         # Normalize angles to [-π, π] at the end
@@ -300,8 +300,8 @@ class BaseAgent(ABC):
         # Total torques
         torques = proportional_torques + derivative_torques
 
-        # Clamp to valid range
-        torques = np.clip(torques, -self.max_torque, self.max_torque)
+        # Do not clip torques here - let physics boundary handle it
+        # This is important for future RL learning where agents need to observe actual control outputs
 
         return torques
 

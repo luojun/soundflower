@@ -88,7 +88,7 @@ class Environment:
         Args:
             action: Action to apply (torques for each joint)
         """
-        # Clamp action
+        # Clip action
         action = np.clip(action, -self.config.max_torque, self.config.max_torque)
 
         # Apply to physics engine
@@ -143,7 +143,7 @@ class Environment:
             # Normalize to [-pi, pi]
             orientation_errors = np.arctan2(np.sin(orientation_errors), np.cos(orientation_errors))
 
-            # Orientation factors: cosine of angle difference, clamped to [0, 1]
+            # Orientation factors: cosine of angle difference, clipped to [0, 1]
             orientation_factors = np.maximum(0.0, np.cos(orientation_errors))  # (n_sources,)
 
             # Energy = Intensity × Area × Time × Orientation_factor

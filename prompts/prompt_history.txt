@@ -399,3 +399,41 @@ maintain consistency, though its implementation may remain similar since it alre
 orientation-only optimization. (5) Remove min_distance_to_source from agent constructors in
 @demo.py and @demo_all.py. This simplification fixes workspace bugs, removes redundant code, and
 makes agents more direct and efficient.
+
+~
+Replace hard minimum distance constraint enforcement with soft spring-damper repulsion force and fix
+torque clipping architecture. Current implementation causes violent arm oscillations because hard constraint
+enforcement (adjusting arm position and resetting velocities) conflicts with agent control. Additionally,
+torque clipping occurs at multiple levels including the PD controller, preventing agents from learning
+about physical limits. Implement the following: (1) Replace _enforce_minimum_distance_constraint() hard
+position adjustment with soft spring-damper repulsion force. When distance < min_distance_to_source,
+compute repulsion force using spring-damper model: repulsion_force = k_repulsion * (min_distance - distance)
+- c_damping * velocity_toward_source, where k_repulsion is spring coefficient (default 50.0) and
+c_damping is damping coefficient (default 10.0). Compute velocity_toward_source by: (a) get end effector
+velocity from joint velocities using position Jacobian: v_ee = J * q_dot, (b) project onto direction
+toward source: velocity_toward_source = dot(v_ee, direction_to_source_normalized). Convert repulsion force
+to joint torques using Jacobian transpose: repulsion_torques = J^T * repulsion_force_direction. Add
+repulsion_torques to current_torques instead of adjusting arm position. Do not reset velocities. The
+spring-damper model prevents crashes even with high velocities and is standard in robotics (virtual
+fixtures). (2) Remove torque clipping from _compute_pd_torques() in @agents/base_agent.py - let PD
+controller output freely. This is important for future RL learning where agents need to observe actual
+control outputs. (3) Keep torque clipping only at physics boundary: @environment/environment.py
+apply_action() and @environment/physics_engine.py set_torques(). Remove redundant clipping from
+@environment/physics.py ArmPhysics.step() (line 100 hardcoded 10.0). (4) Replace "clamping" terminology
+with "clipping" throughout codebase and comments (clipping is standard in control systems for limiting
+values to a range). (5) Add repulsion_coefficient and repulsion_damping parameters to @experimenter/config.py
+(defaults 50.0 and 10.0 respectively) to control soft constraint strength and damping. This approach
+provides smooth repulsion with velocity-dependent damping, prevents crashes and violent oscillations,
+enables RL learning, and maintains clean separation between control and physics.
+~
+Fix violent arm flapping caused by repulsion forces overwhelming agent control. The initial soft
+spring-damper repulsion implementation caused excessive oscillations because repulsion forces were too
+large relative to agent control torques, creating a feedback conflict. Implement the following fixes:
+(1) Scale repulsion force relative to max_torque (30% limit) to prevent repulsion from dominating agent
+control. Normalize violation by min_distance to get relative violation [0, 1] for consistent scaling.
+(2) Clip repulsion torques to 30% of max_torque before adding to current_torques, ensuring repulsion
+remains a soft constraint that supplements rather than overwhelms agent control. (3) Clip total torques
+after adding repulsion torques to enforce physical limits. (4) Reduce default repulsion_coefficient from
+50.0 to 10.0 and repulsion_damping from 10.0 to 5.0 in @experimenter/config.py for gentler, more stable
+repulsion. These changes ensure repulsion acts as a soft constraint that guides the arm away from
+violations while preserving goal-oriented agent behavior and preventing violent oscillations.
