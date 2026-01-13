@@ -37,15 +37,15 @@ class MultiAgentDemo:
         config_2link = create_default_config(sound_source_angular_velocity=0.3)
         config_2link.num_links = 2
         config_2link.link_lengths = [0.5, 0.3]
-        config_2link.link_masses = [1.0, 0.6]
-        config_2link.joint_frictions = [0.1, 0.15]
+        config_2link.link_masses = [6.0, 3.0]
+        config_2link.joint_frictions = [1.0, 1.0]
         config_2link.__post_init__()
 
         config_3link = create_default_config(sound_source_angular_velocity=0.3)
         config_3link.num_links = 3
         config_3link.link_lengths = [0.5, 0.4, 0.3]
-        config_3link.link_masses = [1.0, 0.8, 0.6]
-        config_3link.joint_frictions = [0.1, 0.12, 0.15]
+        config_3link.link_masses = [6.0, 6.0, 3.0]
+        config_3link.joint_frictions = [1.0, 1.0, 1.0]
         config_3link.__post_init__()
 
         # Create six separate environments and agents (3 agents × 2 link configs)

@@ -30,7 +30,7 @@ class SoundFlowerConfig:
     min_distance_to_source: float = 0.2  # Minimum physical distance between microphone and sound source (meters)
 
     # Force
-    max_torque: float = 10.0  # Maximum torque that can be applied at joints
+    max_torque: float = 2.0  # Maximum torque that can be applied at joints
     repulsion_coefficient: float = 10.0  # Spring coefficient for soft minimum distance constraint (reduced from 50.0 for stability)
     repulsion_damping: float = 5.0  # Damping coefficient for soft minimum distance constraint (reduced from 10.0 for stability)
 
@@ -86,8 +86,8 @@ def create_default_config(sound_source_angular_velocity: float = 0.2) -> SoundFl
     return SoundFlowerConfig(
         num_links=2,
         link_lengths=[0.6, 0.4],
-        link_masses=[1.0, 0.8],
-        joint_frictions=[0.1, 0.15],
+        link_masses=[6.0, 6.0],
+        joint_frictions=[1.0, 1.0],
         circle_radius=1.0,
         num_microphones=1,
         microphone_gain=1.0,
@@ -96,7 +96,7 @@ def create_default_config(sound_source_angular_velocity: float = 0.2) -> SoundFl
         sound_attenuation_coeff=1.0,
         min_distance_to_source=0.2,
         dt=0.01,
-        max_torque=5.0,
+        max_torque=2.0,
         sound_source_angular_velocity=sound_source_angular_velocity,
         sound_source_initial_angle=np.pi / 4  # Start at 45 degrees
     )

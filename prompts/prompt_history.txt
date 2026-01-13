@@ -437,3 +437,6 @@ after adding repulsion torques to enforce physical limits. (4) Reduce default re
 50.0 to 10.0 and repulsion_damping from 10.0 to 5.0 in @experimenter/config.py for gentler, more stable
 repulsion. These changes ensure repulsion acts as a soft constraint that guides the arm away from
 violations while preserving goal-oriented agent behavior and preventing violent oscillations.
+
+~
+Increased mass and friction to smooth out the dynamics.

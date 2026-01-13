@@ -36,8 +36,8 @@ def main(headless: bool = False):
     config = create_default_config(sound_source_angular_velocity=0.3)
     config.num_links = 3
     config.link_lengths = [0.5, 0.4, 0.3]
-    config.link_masses = [1.0, 0.8, 0.6]
-    config.joint_frictions = [0.1, 0.12, 0.15]
+    config.link_masses = [6.0, 6.0, 3.0]
+    config.joint_frictions = [1.0, 1.0, 1.0]
     config.__post_init__()  # Ensure configuration is validated
     environment = Environment(config)
     agent = TrackingAgent(
