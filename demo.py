@@ -41,8 +41,7 @@ def main(headless: bool = False):
     config.__post_init__()  # Ensure configuration is validated
     environment = Environment(config)
     agent = TrackingAgent(
-        link_lengths=np.array(config.link_lengths),
-        min_distance_to_source=config.min_distance_to_source
+        link_lengths=np.array(config.link_lengths)
     )
     # Identify logger and plotter by agent type
     agent_name = agent.__class__.__name__

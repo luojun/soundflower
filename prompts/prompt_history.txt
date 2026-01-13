@@ -379,3 +379,23 @@ reduce update frequency.
 (8) Increase legend font size from 7 to 10 and adjust ncol if needed for readability.
 
 This should provide 20-100x speedup for plotting operations while maintaining visual quality.
+
+~
+
+Simplify agent implementations by removing redundant constraint handling and intermediate target computation.
+The physics engine already enforces min_distance_to_source constraint in @environment/physics_engine.py
+via _enforce_minimum_distance_constraint() called every step, so agents should not duplicate this logic.
+Additionally, agents currently compute intermediate target_pos positions instead of optimizing directly
+toward source_pos, causing workspace issues and unnecessary complexity. Refactor as follows: (1) Remove
+min_distance_to_source parameter and all related logic from ApproachingAgent and TrackingAgent
+constructors and select_action methods. The physics engine handles this constraint automatically.
+(2) Remove intermediate target_pos computation - have ApproachingAgent optimize directly toward
+source_pos using IK solver (target_pos=source_pos, position_weight=1.0, orientation_weight=0.0).
+The IK solver naturally handles unreachable targets by converging to the closest reachable point.
+(3) Simplify TrackingAgent to compute target_orientation from source_pos, then optimize both
+position (target_pos=source_pos) and orientation simultaneously. Remove pointing_target and
+approaching_target intermediate computations. (4) Update PointingAgent interface if needed to
+maintain consistency, though its implementation may remain similar since it already uses
+orientation-only optimization. (5) Remove min_distance_to_source from agent constructors in
+@demo.py and @demo_all.py. This simplification fixes workspace bugs, removes redundant code, and
+makes agents more direct and efficient.
