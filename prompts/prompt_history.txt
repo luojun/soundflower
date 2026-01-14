@@ -456,3 +456,8 @@ and TensorBoard plotter to @experimenter/plotter/tensorboard_plotter.py, both in
 "shared" argument from constructor. Update @demo.py to use create_plotter('matplotlib', ...) and @demo_all.py
 to use create_plotter('tensorboard', ...). This provides unified interface while allowing different
 implementations for different use cases (matplotlib for quick debugging, TensorBoard for scalable logging).
+
+~
+Implement unified PygameFramer that treats single-panel visualization as a 1×1 special case of multi-panel.
+This eliminates code duplication in @demo_all.py by extending @experimenter/animator/pygame_framer.py to handle
+multiple panels natively, while maintaining backward compatibility with single-panel usage in @demo.py.

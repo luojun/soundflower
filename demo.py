@@ -49,7 +49,7 @@ def main(headless: bool = False):
     animator = None
     plotter = None
     if not headless:
-        animator = Animator(config=config)
+        animator = Animator(configs=config, window_size=(800, 800))
         # Create matplotlib plotter for single-agent demo
         plotter = create_plotter('matplotlib', config, agent_name)
 

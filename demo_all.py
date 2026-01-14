@@ -1,8 +1,8 @@
-"""Demo script running all three agents simultaneously for side-by-side comparison."""
+"""Demo script running all three agents in two body configurations simultaneously for
+side-by-side comparison."""
 
 import sys
 import time
-import math
 import pygame
 import numpy as np
 import multiprocessing
@@ -12,6 +12,7 @@ from agents.pointing_agent import PointingAgent
 from agents.approaching_agent import ApproachingAgent
 from agents.tracking_agent import TrackingAgent
 from experimenter import create_default_config, Logger
+from experimenter.animator import Animator
 from experimenter.plotter import create_plotter
 from soundflower import SoundFlower
 
@@ -192,146 +193,22 @@ class MultiAgentDemo:
                 process.start()
                 self.processes.append(process)
 
-        # Initialize pygame for multi-panel visualization
+        # Initialize animator for multi-panel visualization
         if not headless:
-            pygame.init()
-            self.panel_width = 400
-            self.panel_height = 400
-            self.panels_per_row = 3
-            self.num_rows = 2
-            self.window_width = self.panel_width * self.panels_per_row
-            self.window_height = self.panel_height * self.num_rows
-            self.screen = pygame.display.set_mode((self.window_width, self.window_height))
-            pygame.display.set_caption("Sound Flower - Multi-Agent Comparison (2-link & 3-link)")
-            self.font = pygame.font.Font(None, 24)
-            self.small_font = pygame.font.Font(None, 18)
-            self.wave_phase = 0.0
+            # Collect all configs for the animator
+            all_configs = []
+            for metadata in self.simulation_metadata:
+                config = metadata['config']  # Use config from metadata directly
+                all_configs.append(config)  # Pass full config objects, Animator will convert them
 
-    def _world_to_screen(self, world_pos: np.ndarray, panel_offset_x: int, panel_offset_y: int, config) -> tuple:
-        """Convert environment coordinates to screen coordinates for a panel."""
-        world_size = max(config.circle_radius, sum(config.link_lengths)) * 1.2
-        screen_x = panel_offset_x + self.panel_width // 2 + int(world_pos[0] * self.panel_width / (2 * world_size))
-        screen_y = panel_offset_y + self.panel_height // 2 - int(world_pos[1] * self.panel_height / (2 * world_size))
-        return screen_x, screen_y
+            self.animator = Animator(all_configs, panels_per_row=3)
 
-    def _world_to_screen_radius(self, world_radius: float, config) -> int:
-        """Convert environment radius to screen radius."""
-        world_size = max(config.circle_radius, sum(config.link_lengths)) * 1.2
-        return int(world_radius * min(self.panel_width, self.panel_height) / (2 * world_size))
-
-    def _render_panel(self, panel_index: int):
-        """Render a single panel for one agent."""
-        # Get metadata and cached render data
-        metadata = self.simulation_metadata[panel_index]
-        agent_name = metadata['agent_name']
-        render_data = self.render_data_cache.get(agent_name)
-        config = self.config_cache.get(agent_name)
-
-        if render_data is None or config is None:
-            return  # No data available yet
-
-        # Calculate panel position (2 rows × 3 columns)
-        row = panel_index // self.panels_per_row
-        col = panel_index % self.panels_per_row
-        panel_offset_x = col * self.panel_width
-        panel_offset_y = row * self.panel_height
-
-        # Colors
-        colors = {
-            'background': (20, 20, 30),
-            'circle': (100, 100, 120),
-            'arm': metadata['color'],
-            'joint': tuple(min(255, c + 50) for c in metadata['color']),
-            'end_effector': (100, 255, 100),
-            'sound_source': (255, 100, 100),
-            'sound_wave': (255, 150, 150),
-            'text': (255, 255, 255),
-            'grid': (40, 40, 50)
-        }
-
-        # Draw panel background
-        pygame.draw.rect(self.screen, colors['background'],
-                        (panel_offset_x, panel_offset_y, self.panel_width, self.panel_height))
-
-        # Draw grid
-        world_size = max(config.circle_radius, sum(config.link_lengths)) * 1.2
-        grid_spacing = world_size / 5
-        screen_spacing = int(grid_spacing * min(self.panel_width, self.panel_height) / (2 * world_size))
-        center_x = panel_offset_x + self.panel_width // 2
-        center_y = panel_offset_y + self.panel_height // 2
-
-        for i in range(-5, 6):
-            x = center_x + i * screen_spacing
-            pygame.draw.line(self.screen, colors['grid'], (x, panel_offset_y), (x, panel_offset_y + self.panel_height), 1)
-        for i in range(-5, 6):
-            y = center_y + i * screen_spacing
-            pygame.draw.line(self.screen, colors['grid'],
-                           (panel_offset_x, y), (panel_offset_x + self.panel_width, y), 1)
-
-        # Draw circle boundary
-        center = (center_x, center_y)
-        radius = self._world_to_screen_radius(config.circle_radius, config)
-        pygame.draw.circle(self.screen, colors['circle'], center, radius, 2)
-
-        # Draw arm
-        joint_positions = render_data['joint_positions']
-        end_effector_pos = render_data['end_effector_pos']
-        for i in range(len(joint_positions) - 1):
-            start = self._world_to_screen(joint_positions[i], panel_offset_x, panel_offset_y, config)
-            end = self._world_to_screen(joint_positions[i + 1], panel_offset_x, panel_offset_y, config)
-            pygame.draw.line(self.screen, colors['arm'], start, end, 5)
-
-        if len(joint_positions) > 0:
-            start = self._world_to_screen(joint_positions[-1], panel_offset_x, panel_offset_y, config)
-            end = self._world_to_screen(end_effector_pos, panel_offset_x, panel_offset_y, config)
-            pygame.draw.line(self.screen, colors['arm'], start, end, 5)
-
-        # Draw joints
-        for i, joint_pos in enumerate(joint_positions):
-            screen_pos = self._world_to_screen(joint_pos, panel_offset_x, panel_offset_y, config)
-            if i == 0:
-                pygame.draw.circle(self.screen, colors['joint'], screen_pos, 8)
-            else:
-                pygame.draw.circle(self.screen, colors['joint'], screen_pos, 6)
-
-        # Draw end effector
-        screen_pos = self._world_to_screen(end_effector_pos, panel_offset_x, panel_offset_y, config)
-        pygame.draw.circle(self.screen, colors['end_effector'], screen_pos, 10)
-        pygame.draw.circle(self.screen, (255, 255, 255), screen_pos, 10, 2)
-
-        # Draw sound sources
-        sound_source_positions = render_data.get('sound_source_positions', [])
-        for source_pos in sound_source_positions:
-            screen_pos = self._world_to_screen(source_pos, panel_offset_x, panel_offset_y, config)
-            # Draw sound waves
-            num_waves = 3
-            for i in range(num_waves):
-                wave_radius = 15 + 10 * i + 5 * math.sin(self.wave_phase + i * math.pi / 2)
-                alpha = max(0, 255 - 80 * i - int(50 * abs(math.sin(self.wave_phase))))
-                color = tuple(min(255, c + alpha // 3) for c in colors['sound_wave'][:3])
-                pygame.draw.circle(self.screen, color, screen_pos, int(wave_radius), 2)
-            # Draw sound source
-            pygame.draw.circle(self.screen, colors['sound_source'], screen_pos, 8)
-            pygame.draw.circle(self.screen, (255, 255, 255), screen_pos, 8, 2)
-
-        # Draw agent name and info
-        text_surface = self.font.render(agent_name, True, colors['text'])
-        self.screen.blit(text_surface, (panel_offset_x + 10, panel_offset_y + 10))
-
-        sound_intensity = render_data.get('sound_intensity', 0.0)
-        text_surface = self.small_font.render(f"Intensity: {sound_intensity:.4f}", True, colors['text'])
-        self.screen.blit(text_surface, (panel_offset_x + 10, panel_offset_y + 35))
-
-        if sound_source_positions:
-            distances = [np.linalg.norm(end_effector_pos - sp) for sp in sound_source_positions]
-            distance_to_source = min(distances)
-            text_surface = self.small_font.render(f"Distance: {distance_to_source:.3f}", True, colors['text'])
-            self.screen.blit(text_surface, (panel_offset_x + 10, panel_offset_y + 53))
 
     def start(self):
-        """Start all simulations (processes already started in __init__)."""
-        # Processes are started in __init__, nothing more to do
-        pass
+        """Start all simulations and animator."""
+        # Start the animator if not headless
+        if not self.headless:
+            self.animator.start()
 
     def step(self):
         """Step all simulations forward by sending step commands."""
@@ -341,12 +218,6 @@ class MultiAgentDemo:
 
         # Process incoming data from worker processes
         self._process_data_queue()
-
-        # Update wave phase for animation
-        if not self.headless:
-            self.wave_phase += 0.1
-            if self.wave_phase > 2 * np.pi:
-                self.wave_phase -= 2 * np.pi
 
     def _process_data_queue(self):
         """Process data from worker processes (non-blocking)."""
@@ -363,22 +234,30 @@ class MultiAgentDemo:
                 break  # No more data available
 
     def render(self):
-        """Render all panels."""
+        """Render all panels using the unified animator."""
         if self.headless:
             return
 
         # Process any pending data from worker processes
         self._process_data_queue()
 
-        # Clear screen
-        self.screen.fill((20, 20, 30))
+        # Collect render data and agent names for all panels
+        render_data_list = []
+        agent_names = []
 
-        # Render each panel
-        for i in range(len(self.simulation_metadata)):
-            self._render_panel(i)
+        for metadata in self.simulation_metadata:
+            agent_name = metadata['agent_name']
+            render_data = self.render_data_cache.get(agent_name)
+            if render_data is not None:
+                render_data_list.append(render_data)
+                agent_names.append(agent_name)
+            else:
+                # No data available for this panel yet
+                render_data_list.append(None)
+                agent_names.append(agent_name)
 
-        # Update display
-        pygame.display.flip()
+        # Render all panels using the animator
+        self.animator.render(render_data_list, agent_names)
 
     def forward(self, n_steps: int):
         """Step all simulations forward by N steps."""
@@ -442,7 +321,7 @@ class MultiAgentDemo:
                     process.kill()
 
         if not self.headless:
-            pygame.quit()
+            self.animator.finish()
 
     def run(self):
         """Run the multi-agent demo."""
