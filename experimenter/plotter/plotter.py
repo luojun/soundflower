@@ -1,88 +1,185 @@
-"""Real-time plotter for simulation metrics using matplotlib."""
+"""Abstract plotter interface and implementations for visualization."""
 
-import matplotlib.pyplot as plt
-import matplotlib
-import numpy as np
-from typing import Dict, Optional, List, Tuple
+from abc import ABC, abstractmethod
+from typing import Optional, Dict, Tuple, List
+import os
 from collections import defaultdict
 import threading
 
+try:
+    from tensorboardX import SummaryWriter
+except ImportError:
+    SummaryWriter = None
 
-class Plotter:
+try:
+    import matplotlib.pyplot as plt
+    import matplotlib
+    import numpy as np
+except ImportError:
+    plt = None
+    matplotlib = None
+    np = None
+
+
+class Plotter(ABC):
     """
-    Plotter interface for real-time visualization.
+    Abstract base class for plotters.
 
-    Designed as a shared instance that can track multiple simulation instances.
-    Decoupled from simulation logic, runs at configurable frequency.
+    Defines the interface that all plotter implementations must follow.
     """
 
-    # Class-level shared instance and lock for thread safety
-    _shared_instance: Optional['Plotter'] = None
-    _lock = threading.Lock()
-
-    def __init__(self, config, agent_name: Optional[str] = None, shared: bool = True):
+    def __init__(self, config, agent_name: Optional[str] = None):
         """
         Initialize plotter.
 
         Args:
             config: Configuration object
             agent_name: Name of the agent for this simulation instance
-            shared: If True, use shared instance for multi-agent scenarios
         """
         self.config = config
         self.agent_name = agent_name
 
-        if shared:
-            with Plotter._lock:
-                if Plotter._shared_instance is None:
-                    # First instance - initialize plots
-                    Plotter._shared_instance = self
-                    self._is_shared = True
-                    self._initialize_plots()
-                    # Initialize data storage as numpy arrays (x, y tuples)
-                    self._step_rewards: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
-                    self._step_energies: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
-                    self._cumulative_rewards: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
-                    self._cumulative_energies: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
-                    # Line objects for incremental updates
-                    self._line_objects: Dict[str, Dict[str, Optional[plt.Line2D]]] = defaultdict(lambda: {
-                        'reward': None, 'energy': None, 'cum_reward': None, 'cum_energy': None
-                    })
-                    # Update tracking
-                    self._known_agents = set()
-                    self._legend_needs_update = False
-                    self.MAX_DATA_POINTS = 2000
-                else:
-                    # Use existing shared instance - store reference
-                    shared_inst = Plotter._shared_instance
-                    # Copy attributes to this instance for convenience
-                    self._shared_instance = shared_inst
-                    self._is_shared = True
-                    self.fig = shared_inst.fig
-                    self.axes = shared_inst.axes
-                    self.ax_reward = shared_inst.ax_reward
-                    self.ax_energy = shared_inst.ax_energy
-                    self.ax_cum_reward = shared_inst.ax_cum_reward
-                    self.ax_cum_energy = shared_inst.ax_cum_energy
-                    # Note: agent_name is already set above, and step() will forward to shared instance
-                    # Data storage and line objects are on shared_inst, accessed via forwarding
-                    return
-        else:
-            self._is_shared = False
-            self._initialize_plots()
-            # Initialize data storage as numpy arrays (x, y tuples)
-            self._step_rewards: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
-            self._step_energies: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
-            self._cumulative_rewards: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
-            self._cumulative_energies: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
-            # Line objects for incremental updates
-            self._line_objects: Dict[str, Dict[str, Optional[plt.Line2D]]] = defaultdict(lambda: {
-                'reward': None, 'energy': None, 'cum_reward': None, 'cum_energy': None
-            })
-            # Update tracking
-            self._known_agents = set()
-            self._legend_needs_update = False
-            self.MAX_DATA_POINTS = 2000
+    @abstractmethod
+    def start(self):
+        """Start plotting."""
+        pass
+
+    @abstractmethod
+    def step(self, step_count: int, reward: float, sound_energy: float,
+             cumulative_reward: float, cumulative_sound_energy: float):
+        """
+        Update plots with new data point.
+
+        Args:
+            step_count: Current step number
+            reward: Normalized reward for this step
+            sound_energy: Raw sound energy for this step (Joules)
+            cumulative_reward: Cumulative normalized reward
+            cumulative_sound_energy: Cumulative sound energy (Joules)
+        """
+        pass
+
+    @abstractmethod
+    def finish(self):
+        """Finish plotting."""
+        pass
+
+
+class TensorBoardPlotter(Plotter):
+    """
+    TensorBoard plotter implementation.
+
+    Logs metrics to TensorBoard files for non-blocking visualization.
+    Designed for multi-process scenarios where matplotlib would cause lag.
+    """
+
+    def __init__(self, config, agent_name: Optional[str] = None):
+        """
+        Initialize TensorBoard plotter.
+
+        Args:
+            config: Configuration object
+            agent_name: Name of the agent for this simulation instance
+        """
+        super().__init__(config, agent_name)
+
+        # Create TensorBoard writer if available
+        self.writer = None
+        if SummaryWriter is not None and agent_name is not None:
+            log_dir = os.path.join("logs", agent_name)
+            os.makedirs(log_dir, exist_ok=True)
+            self.writer = SummaryWriter(log_dir=log_dir)
+        elif SummaryWriter is None:
+            print(f"Warning: tensorboardX not installed. Install with: pip install tensorboardX")
+
+    def start(self):
+        """Start plotting (no-op for TensorBoard, files are written on step)."""
+        pass
+
+    def step(self, step_count: int, reward: float, sound_energy: float,
+             cumulative_reward: float, cumulative_sound_energy: float):
+        """
+        Log metrics to TensorBoard.
+
+        Args:
+            step_count: Current step number
+            reward: Normalized reward for this step
+            sound_energy: Raw sound energy for this step (Joules)
+            cumulative_reward: Cumulative normalized reward
+            cumulative_sound_energy: Cumulative sound energy (Joules)
+        """
+        if self.writer is None:
+            return
+
+        self.writer.add_scalar('reward', reward, step_count)
+        self.writer.add_scalar('energy', sound_energy, step_count)
+        self.writer.add_scalar('cumulative_reward', cumulative_reward, step_count)
+        self.writer.add_scalar('cumulative_energy', cumulative_sound_energy, step_count)
+
+    def finish(self):
+        """Finish plotting (close TensorBoard writer)."""
+        if self.writer is not None:
+            self.writer.close()
+
+
+class MatplotlibPlotter(Plotter):
+    """
+    Matplotlib plotter implementation for real-time visualization.
+
+    Designed as a shared instance that can track multiple simulation instances.
+    Decoupled from simulation logic, runs at configurable frequency.
+    """
+
+    # Class-level shared instance and lock for thread safety
+    _shared_instance: Optional['MatplotlibPlotter'] = None
+    _lock = threading.Lock()
+
+    def __init__(self, config, agent_name: Optional[str] = None):
+        """
+        Initialize matplotlib plotter.
+
+        Args:
+            config: Configuration object
+            agent_name: Name of the agent for this simulation instance
+        """
+        if plt is None or np is None:
+            raise ImportError("matplotlib and numpy are required for MatplotlibPlotter")
+        super().__init__(config, agent_name)
+
+        with MatplotlibPlotter._lock:
+            if MatplotlibPlotter._shared_instance is None:
+                # First instance - initialize plots
+                MatplotlibPlotter._shared_instance = self
+                self._is_shared = True
+                self._initialize_plots()
+                # Initialize data storage as numpy arrays (x, y tuples)
+                self._step_rewards: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
+                self._step_energies: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
+                self._cumulative_rewards: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
+                self._cumulative_energies: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
+                # Line objects for incremental updates
+                self._line_objects: Dict[str, Dict[str, Optional[plt.Line2D]]] = defaultdict(lambda: {
+                    'reward': None, 'energy': None, 'cum_reward': None, 'cum_energy': None
+                })
+                # Update tracking
+                self._known_agents = set()
+                self._legend_needs_update = False
+                self.MAX_DATA_POINTS = 2000
+            else:
+                # Use existing shared instance - store reference
+                shared_inst = MatplotlibPlotter._shared_instance
+                # Copy attributes to this instance for convenience
+                self._shared_instance = shared_inst
+                self._is_shared = True
+                self.fig = shared_inst.fig
+                self.axes = shared_inst.axes
+                self.ax_reward = shared_inst.ax_reward
+                self.ax_energy = shared_inst.ax_energy
+                self.ax_cum_reward = shared_inst.ax_cum_reward
+                self.ax_cum_energy = shared_inst.ax_cum_energy
+                # Note: agent_name is already set above, and step() will forward to shared instance
+                # Data storage and line objects are on shared_inst, accessed via forwarding
+                return
 
         # Agent color and style mapping
         # Base colors for agent types
@@ -174,7 +271,6 @@ class Plotter:
             cumulative_sound_energy: Cumulative sound energy (Joules)
         """
         # If using shared instance and this is not the main instance, forward to main
-        # but preserve this instance's agent_name
         if self._is_shared and hasattr(self, '_shared_instance') and self._shared_instance is not self:
             # Temporarily set agent_name on shared instance, call step, then restore
             original_name = self._shared_instance.agent_name
@@ -299,3 +395,22 @@ class Plotter:
         # plt.ioff()  # Turn off interactive mode if desired
         # plt.show(block=True)  # Block until window is closed
 
+
+def create_plotter(plotter_type: str, config, agent_name: Optional[str] = None):
+    """
+    Factory function to create the appropriate plotter.
+
+    Args:
+        plotter_type: 'matplotlib' or 'tensorboard'
+        config: Configuration object
+        agent_name: Name of the agent for this simulation instance
+
+    Returns:
+        Plotter instance
+    """
+    if plotter_type == 'matplotlib':
+        return MatplotlibPlotter(config, agent_name)
+    elif plotter_type == 'tensorboard':
+        return TensorBoardPlotter(config, agent_name)
+    else:
+        raise ValueError(f"Unknown plotter type: {plotter_type}")

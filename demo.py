@@ -7,7 +7,7 @@ from environment import Environment
 from agents.tracking_agent import TrackingAgent
 from experimenter import create_default_config, Logger
 from experimenter.animator import Animator
-from experimenter.plotter import Plotter
+from experimenter.plotter import create_plotter
 from soundflower import SoundFlower
 
 
@@ -50,8 +50,8 @@ def main(headless: bool = False):
     plotter = None
     if not headless:
         animator = Animator(config=config)
-        # Create non-shared plotter for single-agent demo
-        plotter = Plotter(config, agent_name=agent_name, shared=False)
+        # Create matplotlib plotter for single-agent demo
+        plotter = create_plotter('matplotlib', config, agent_name)
 
     soundflower = SoundFlower(config, environment, agent, logger=logger, animator=animator, plotter=plotter)
 

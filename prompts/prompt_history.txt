@@ -447,3 +447,12 @@ SoundFlower instance should run in its own process, sending render data via mult
 main process which handles Pygame rendering and matplotlib plotting. This provides true parallelism (bypasses
 GIL) and scales with CPU cores. Keep @demo.py synchronous as threading provides minimal benefit for single
 instances. Use process-safe data structures and ensure proper cleanup on exit.
+
+~
+Unify plotting interface across demos by creating an abstract Plotter base class with matplotlib and
+TensorBoard implementations. Create @experimenter/plotter/plotter.py with abstract Plotter interface and
+create_plotter() factory function. Move existing matplotlib plotter to @experimenter/plotter/matplotlib_plotter.py
+and TensorBoard plotter to @experimenter/plotter/tensorboard_plotter.py, both inheriting from Plotter. Remove
+"shared" argument from constructor. Update @demo.py to use create_plotter('matplotlib', ...) and @demo_all.py
+to use create_plotter('tensorboard', ...). This provides unified interface while allowing different
+implementations for different use cases (matplotlib for quick debugging, TensorBoard for scalable logging).

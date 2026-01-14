@@ -12,7 +12,7 @@ from agents.pointing_agent import PointingAgent
 from agents.approaching_agent import ApproachingAgent
 from agents.tracking_agent import TrackingAgent
 from experimenter import create_default_config, Logger
-from experimenter.plotter import Plotter
+from experimenter.plotter import create_plotter
 from soundflower import SoundFlower
 
 
@@ -34,7 +34,7 @@ def simulation_worker(config, agent_class, agent_name, link_name, command_queue,
         agent_name: Name of the agent
         link_name: Link configuration name
         command_queue: Queue for receiving commands from main process
-        data_queue: Queue for sending render/plotter data to main process
+        data_queue: Queue for sending render data to main process
     """
     try:
         # Create environment and agent in this process
@@ -42,36 +42,26 @@ def simulation_worker(config, agent_class, agent_name, link_name, command_queue,
         agent = agent_class(link_lengths=np.array(config.link_lengths))
         logger = Logger(agent_name=agent_name)
 
-        # Don't create plotter in worker - main process handles plotting
+        # Create TensorBoard plotter (non-blocking file I/O)
+        plotter = create_plotter('tensorboard', config, agent_name)
+
+        # Create SoundFlower with TensorBoard plotter
         soundflower = SoundFlower(
             config, environment, agent,
-            logger=logger, animator=None, plotter=None
+            logger=logger, animator=None, plotter=plotter
         )
         soundflower.start()
 
         paused = False
         running = True
-        time_since_last_plot = 0.0
-        plotting_period = 1.0 / config.plotting_frequency if config.plotting_frequency > 0 else float('inf')
 
         # Send initial render data
         render_data = environment.get_render_data()
-        environment_state = environment.get_state()
         data_queue.put({
             'type': 'render',
             'agent_name': agent_name,
             'render_data': render_data,
             'config': config
-        })
-
-        data_queue.put({
-            'type': 'plotter',
-            'agent_name': agent_name,
-            'step_count': soundflower.step_count,
-            'reward': environment_state.reward,
-            'sound_energy': environment_state.observation.sound_energy,
-            'cumulative_reward': soundflower.cumulative_reward,
-            'cumulative_sound_energy': soundflower.cumulative_sound_energy
         })
 
         while running:
@@ -91,21 +81,11 @@ def simulation_worker(config, agent_class, agent_name, link_name, command_queue,
                             soundflower.step()
                         # Send updated data after forward steps
                         render_data = environment.get_render_data()
-                        environment_state = environment.get_state()
                         data_queue.put({
                             'type': 'render',
                             'agent_name': agent_name,
                             'render_data': render_data,
                             'config': config
-                        })
-                        data_queue.put({
-                            'type': 'plotter',
-                            'agent_name': agent_name,
-                            'step_count': soundflower.step_count,
-                            'reward': environment_state.reward,
-                            'sound_energy': environment_state.observation.sound_energy,
-                            'cumulative_reward': soundflower.cumulative_reward,
-                            'cumulative_sound_energy': soundflower.cumulative_sound_energy
                         })
                     elif cmd['type'] == CMD_QUIT:
                         running = False
@@ -118,7 +98,6 @@ def simulation_worker(config, agent_class, agent_name, link_name, command_queue,
 
             if not paused:
                 soundflower.step()
-                time_since_last_plot += config.dt
 
                 # Send render data periodically (every few steps to reduce queue overhead)
                 if soundflower.step_count % 5 == 0:  # Send every 5 steps
@@ -130,24 +109,11 @@ def simulation_worker(config, agent_class, agent_name, link_name, command_queue,
                         'config': config
                     })
 
-                # Send plotter data at plotting frequency
-                if time_since_last_plot >= plotting_period:
-                    environment_state = environment.get_state()
-                    data_queue.put({
-                        'type': 'plotter',
-                        'agent_name': agent_name,
-                        'step_count': soundflower.step_count,
-                        'reward': environment_state.reward,
-                        'sound_energy': environment_state.observation.sound_energy,
-                        'cumulative_reward': soundflower.cumulative_reward,
-                        'cumulative_sound_energy': soundflower.cumulative_sound_energy
-                    })
-                    time_since_last_plot = 0.0
-
             # Small sleep to prevent CPU spinning
             time.sleep(0.001)
 
         soundflower.finish()
+        plotter.finish()
     except Exception as e:
         print(f"Error in simulation worker {agent_name}: {e}")
         import traceback
@@ -168,13 +134,6 @@ class MultiAgentDemo:
             headless: If True, run without animation
         """
         self.headless = headless
-
-        # Create shared plotter instance for all agents (only in main process)
-        self.shared_plotter = None
-        if not headless:
-            # Create first plotter instance (will become shared)
-            base_config = create_default_config(sound_source_angular_velocity=0.3)
-            self.shared_plotter = Plotter(base_config, agent_name=None, shared=True)
 
         # Create configurations for 2-link and 3-link arms
         config_2link = create_default_config(sound_source_angular_velocity=0.3)
@@ -198,10 +157,6 @@ class MultiAgentDemo:
         self.simulation_metadata = []  # Store metadata for each simulation
         self.render_data_cache = {}  # Cache render data from processes
         self.config_cache = {}  # Cache configs for rendering
-        self.plotters = {}  # Store plotter instances per agent
-        self.plotter_data_buffer = {}  # Buffer plotter data for batch processing
-        self.last_plot_update_time = time.time()  # Initialize to current time
-        self.plot_update_interval = 0.5  # Update plots at most every 0.5 seconds
 
         agent_configs = [
             ("PointingAgent", PointingAgent, (255, 100, 100)),  # Red
@@ -228,11 +183,6 @@ class MultiAgentDemo:
                     'link_name': link_name,
                     'config': link_config
                 })
-
-                # Create plotter instance for this agent (in main process)
-                if self.shared_plotter:
-                    plotter = Plotter(link_config, agent_name=full_agent_name, shared=True)
-                    self.plotters[full_agent_name] = plotter
 
                 # Create and start worker process
                 process = multiprocessing.Process(
@@ -380,9 +330,8 @@ class MultiAgentDemo:
 
     def start(self):
         """Start all simulations (processes already started in __init__)."""
-        # Processes are started in __init__, just need to initialize plotter
-        if self.shared_plotter:
-            self.shared_plotter.start()
+        # Processes are started in __init__, nothing more to do
+        pass
 
     def step(self):
         """Step all simulations forward by sending step commands."""
@@ -401,9 +350,6 @@ class MultiAgentDemo:
 
     def _process_data_queue(self):
         """Process data from worker processes (non-blocking)."""
-        current_time = time.time()
-        should_update_plots = (current_time - self.last_plot_update_time) >= self.plot_update_interval
-
         while True:
             try:
                 data = self.data_queue.get_nowait()
@@ -411,29 +357,10 @@ class MultiAgentDemo:
                     agent_name = data['agent_name']
                     self.render_data_cache[agent_name] = data['render_data']
                     self.config_cache[agent_name] = data['config']
-                elif data['type'] == 'plotter':
-                    # Buffer plotter data for batch processing
-                    agent_name = data['agent_name']
-                    if agent_name in self.plotters:
-                        self.plotter_data_buffer[agent_name] = data
                 elif data['type'] == 'done':
                     pass  # Process finished
             except:
                 break  # No more data available
-
-        # Batch update plots if enough time has passed
-        if should_update_plots and self.plotter_data_buffer:
-            for agent_name, plot_data in self.plotter_data_buffer.items():
-                if agent_name in self.plotters:
-                    self.plotters[agent_name].step(
-                        plot_data['step_count'],
-                        plot_data['reward'],
-                        plot_data['sound_energy'],
-                        plot_data['cumulative_reward'],
-                        plot_data['cumulative_sound_energy']
-                    )
-            self.plotter_data_buffer.clear()
-            self.last_plot_update_time = current_time
 
     def render(self):
         """Render all panels."""
@@ -459,7 +386,7 @@ class MultiAgentDemo:
         for command_queue in self.command_queues:
             command_queue.put({'type': CMD_FORWARD, 'n_steps': n_steps})
 
-        # Process incoming data (workers will send updated render/plotter data)
+        # Process incoming data (workers will send updated render data)
         self._process_data_queue()
 
     def handle_events(self, paused: bool = False):
@@ -514,9 +441,6 @@ class MultiAgentDemo:
                 if process.is_alive():
                     process.kill()
 
-        if self.shared_plotter:
-            self.shared_plotter.finish()
-
         if not self.headless:
             pygame.quit()
 
@@ -534,6 +458,9 @@ class MultiAgentDemo:
         print("    - PointingAgent (Red): Only orients toward sound source")
         print("    - ApproachingAgent (Green): Only minimizes distance")
         print("    - TrackingAgent (Blue): Both points and minimizes distance")
+        print("=" * 60)
+        print("\nTensorBoard logging enabled.")
+        print("To view metrics, run: tensorboard --logdir=logs")
         print("=" * 60)
 
         if not self.headless:
@@ -589,4 +516,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
