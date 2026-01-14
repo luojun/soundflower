@@ -40,7 +40,7 @@ def simulation_worker(config, agent_class, agent_name, link_name, command_queue,
     try:
         # Create environment and agent in this process
         environment = Environment(config)
-        agent = agent_class(link_lengths=np.array(config.link_lengths))
+        agent = agent_class()
         logger = Logger(agent_name=agent_name)
 
         # Create TensorBoard plotter (non-blocking file I/O)

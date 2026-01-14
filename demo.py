@@ -40,9 +40,7 @@ def main(headless: bool = False):
     config.joint_frictions = [1.0, 1.0, 1.0]
     config.__post_init__()  # Ensure configuration is validated
     environment = Environment(config)
-    agent = TrackingAgent(
-        link_lengths=np.array(config.link_lengths)
-    )
+    agent = TrackingAgent()
     # Identify logger and plotter by agent type
     agent_name = agent.__class__.__name__
     logger = Logger(agent_name=agent_name)

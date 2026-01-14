@@ -48,6 +48,9 @@ class SoundFlowerConfig:
     # Reward normalization
     reward_normalization_factor: float = None  # Auto-computed if None
 
+    # Observation mode ("sensorimotor" or "full")
+    observation_mode: str = "full"
+
     def __post_init__(self):
         """Validate and adjust configuration."""
         # Ensure link_lengths and link_masses match num_links

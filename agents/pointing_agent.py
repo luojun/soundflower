@@ -13,18 +13,15 @@ class PointingAgent(BaseAgent):
     in the direction of the sound source for optimal sound reception.
     """
 
-    def __init__(self, kp: float = 5.0, kd: float = 0.5, max_torque: float = 10.0,
-                 link_lengths: np.ndarray = None):
+    def __init__(self, kp: float = 5.0, kd: float = 0.5):
         """
         Initialize pointing agent.
 
         Args:
             kp: Proportional gain for PD controller
             kd: Derivative gain for PD controller
-            max_torque: Maximum torque that can be applied (for clipping)
-            link_lengths: Array of link lengths for IK computation
         """
-        super().__init__(kp=kp, kd=kd, max_torque=max_torque, link_lengths=link_lengths)
+        super().__init__(kp=kp, kd=kd)
         self.target_angle = 0.0
 
     def select_action(self, observation: Observation) -> np.ndarray:
@@ -40,7 +37,7 @@ class PointingAgent(BaseAgent):
         Returns:
             action: Torques to apply at each joint
         """
-        if not observation.sound_source_positions:
+        if self._warn_if_missing_sources(observation):
             return np.zeros(len(observation.arm_angles))
 
         # Find nearest sound source
@@ -56,10 +53,14 @@ class PointingAgent(BaseAgent):
             direction_to_source_normalized = direction_to_source / distance_to_source
             target_orientation = np.arctan2(direction_to_source_normalized[1], direction_to_source_normalized[0])
 
+            link_lengths = self._get_link_lengths(observation)
+            if link_lengths is None:
+                return np.zeros(len(observation.arm_angles))
+
             # Solve IK with orientation-only (position_weight=0.0 to ignore position)
             desired_angles = self._solve_inverse_kinematics(
                 current_angles=observation.arm_angles,
-                link_lengths=self.link_lengths,
+                link_lengths=link_lengths,
                 target_pos=None,
                 target_orientation=target_orientation,
                 position_weight=0.0,

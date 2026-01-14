@@ -33,9 +33,11 @@ class Logger:
         obs = state.observation
         if obs:
             prefix = self._get_agent_prefix()
+            sound_intensity = state.sound_intensity if state.sound_intensity is not None else obs.sound_intensity
+            sound_energy = state.sound_energy if state.sound_energy is not None else 0.0
             print(f"{prefix}[Step {step_count:6d} | Time {simulation_time:7.2f}s] "
-                  f"Sound Intensity: {obs.sound_intensity:8.2f} W/m² | "
-                  f"Sound Energy: {obs.sound_energy:12.4f} J | "
+                  f"Sound Intensity: {sound_intensity:8.2f} W/m² | "
+                  f"Sound Energy: {sound_energy:12.4f} J | "
                   f"Reward: {state.reward:12.4f}")
 
     def log_final(self, soundflower):

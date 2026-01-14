@@ -1,6 +1,8 @@
 """Base agent class with shared components for sound source tracking."""
 
 import numpy as np
+import warnings
+from typing import Optional
 from abc import ABC, abstractmethod
 from environment import Observation
 
@@ -8,21 +10,47 @@ from environment import Observation
 class BaseAgent(ABC):
     """Base class for agents with shared PD controller and utility functions."""
 
-    def __init__(self, kp: float = 5.0, kd: float = 0.5, max_torque: float = 10.0,
-                 link_lengths: np.ndarray = None):
+    def __init__(self, kp: float = 5.0, kd: float = 0.5):
         """
         Initialize base agent.
 
         Args:
             kp: Proportional gain for PD controller
             kd: Derivative gain for PD controller
-            max_torque: Maximum torque that can be applied (for clipping)
-            link_lengths: Array of link lengths for IK computation (required for position-based IK)
         """
         self.kp = kp
         self.kd = kd
-        self.max_torque = max_torque
-        self.link_lengths = link_lengths if link_lengths is not None else np.array([0.5, 0.5])
+        self._warned_missing_sources = False
+        self._warned_missing_link_lengths = False
+
+    def _warn_if_missing_sources(self, observation: Observation) -> bool:
+        """Warn once if sound source positions are unavailable (Sensorimotor mode)."""
+        if observation.sound_source_positions:
+            return False
+        if not self._warned_missing_sources:
+            warnings.warn(
+                f"{self.__class__.__name__} received no sound source positions; "
+                "behaving blindly with zero torques. This is expected in Sensorimotor mode.",
+                RuntimeWarning,
+                stacklevel=2
+            )
+            self._warned_missing_sources = True
+        return True
+
+    def _get_link_lengths(self, observation: Observation) -> Optional[np.ndarray]:
+        """Get link lengths from observation, warning once if unavailable."""
+        link_lengths = observation.link_lengths
+        if link_lengths is not None:
+            return link_lengths
+        if not self._warned_missing_link_lengths:
+            warnings.warn(
+                f"{self.__class__.__name__} received no link_lengths; "
+                "cannot run IK without Full observations.",
+                RuntimeWarning,
+                stacklevel=2
+            )
+            self._warned_missing_link_lengths = True
+        return None
 
     @abstractmethod
     def select_action(self, observation: Observation) -> np.ndarray:

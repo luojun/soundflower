@@ -13,20 +13,17 @@ class TrackingAgent(BaseAgent):
     achieving optimal sound reception through both proper orientation and proximity.
     """
 
-    def __init__(self, kp: float = 5.0, kd: float = 0.5, max_torque: float = 10.0,
-                 pointing_weight: float = 0.5, link_lengths: np.ndarray = None):
+    def __init__(self, kp: float = 5.0, kd: float = 0.5, pointing_weight: float = 0.5):
         """
         Initialize tracking agent.
 
         Args:
             kp: Proportional gain for PD controller
             kd: Derivative gain for PD controller
-            max_torque: Maximum torque that can be applied (for clipping)
             pointing_weight: Weight for pointing objective (0-1).
                            Distance minimization weight is (1 - pointing_weight)
-            link_lengths: Array of link lengths for IK computation
         """
-        super().__init__(kp=kp, kd=kd, max_torque=max_torque, link_lengths=link_lengths)
+        super().__init__(kp=kp, kd=kd)
         self.pointing_weight = pointing_weight
         self.target_angle = 0.0
 
@@ -42,7 +39,7 @@ class TrackingAgent(BaseAgent):
         Returns:
             action: Torques to apply at each joint
         """
-        if not observation.sound_source_positions:
+        if self._warn_if_missing_sources(observation):
             return np.zeros(len(observation.arm_angles))
 
         # Find nearest sound source
@@ -64,13 +61,17 @@ class TrackingAgent(BaseAgent):
             else:
                 target_orientation = observation.microphone_orientation
 
+        link_lengths = self._get_link_lengths(observation)
+        if link_lengths is None:
+            return np.zeros(len(observation.arm_angles))
+
         # Optimize directly toward source position with both position and orientation objectives
         # The IK solver naturally handles unreachable targets by converging to the closest reachable point.
         # The physics engine enforces min_distance_to_source constraint automatically.
         # Use pointing_weight to balance position vs orientation emphasis
         desired_angles = self._solve_inverse_kinematics(
             current_angles=observation.arm_angles,
-            link_lengths=self.link_lengths,
+            link_lengths=link_lengths,
             target_pos=source_pos,
             target_orientation=target_orientation,
             position_weight=1.0,

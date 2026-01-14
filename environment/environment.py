@@ -1,7 +1,7 @@
 """Environment interface - represents the simulation state and logic."""
 
 import numpy as np
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
 from .physics_engine import PhysicsEngine, PhysicsState
 
@@ -11,12 +11,16 @@ class Observation:
     """Observation from the environment."""
     arm_angles: np.ndarray  # Current joint angles
     arm_angular_velocities: np.ndarray  # Current joint angular velocities
-    end_effector_pos: np.ndarray  # End effector position (x, y)
+    arm_angular_accelerations: np.ndarray  # Current joint angular accelerations
+    last_torques: np.ndarray  # Last applied joint torques (efference copy)
     sound_intensity: float  # Current sound intensity at microphone (power per unit area)
-    sound_energy: float  # Current sound energy collected by microphone (energy)
-    sound_energy_delta: float  # Change in sound energy (for reward)
-    sound_source_positions: List[np.ndarray]  # Positions of sound sources
-    microphone_orientation: float  # Orientation angle of microphone (rad)
+    # Full-mode fields (None in Sensorimotor mode)
+    end_effector_pos: Optional[np.ndarray] = None  # End effector position (x, y)
+    sound_source_positions: Optional[List[np.ndarray]] = None  # Positions of sound sources
+    microphone_orientation: Optional[float] = None  # Orientation angle of microphone (rad)
+    link_lengths: Optional[np.ndarray] = None
+    link_masses: Optional[np.ndarray] = None
+    joint_frictions: Optional[np.ndarray] = None
 
 
 @dataclass
@@ -24,6 +28,9 @@ class State:
     """Complete state of the environment."""
     physics_state: PhysicsState
     observation: Optional[Observation] = None
+    sound_intensity: Optional[float] = None
+    sound_energy: Optional[float] = None
+    sound_energy_delta: Optional[float] = None
     reward: float = 0.0
     done: bool = False
     info: Dict[str, Any] = None
@@ -52,6 +59,8 @@ class Environment:
 
         # Track previous sound energy for delta computation
         self.previous_sound_energy = 0.0
+        self.previous_angular_velocities = np.zeros(config.num_links)
+        self.last_action = np.zeros(config.num_links)
 
     def step(self):
         self.physics_engine.step()
@@ -64,10 +73,10 @@ class Environment:
             Current environment state
         """
         physics_state = self.physics_engine.get_state()
-        observation = self._compute_observation(physics_state)
+        observation, sound_metrics = self._compute_observation(physics_state)
 
         # Compute reward
-        reward = observation.sound_energy_delta
+        reward = sound_metrics["sound_energy_delta"]
 
         # Normalize reward by maximum possible delta
         if self.config.reward_normalization_factor > 0:
@@ -76,6 +85,9 @@ class Environment:
         return State(
             physics_state=physics_state,
             observation=observation,
+            sound_intensity=sound_metrics["sound_intensity"],
+            sound_energy=sound_metrics["sound_energy"],
+            sound_energy_delta=sound_metrics["sound_energy_delta"],
             reward=reward,
             done=False,  # Infinite horizon
             info=None
@@ -91,11 +103,12 @@ class Environment:
         # Clip action
         action = np.clip(action, -self.config.max_torque, self.config.max_torque)
 
+        self.last_action = action.copy()
         # Apply to physics engine
         self.physics_engine.set_torques(action)
 
 
-    def _compute_observation(self, physics_state: PhysicsState) -> Observation:
+    def _compute_observation(self, physics_state: PhysicsState) -> Tuple[Observation, Dict[str, float]]:
         """Compute observation from physics state."""
         # Forward kinematics
         joint_positions, end_effector_pos = self.physics_engine.arm_physics.forward_kinematics(
@@ -154,19 +167,47 @@ class Environment:
         sound_energy_delta = sound_energy - self.previous_sound_energy
         self.previous_sound_energy = sound_energy
 
+        # Joint angular accelerations (finite difference)
+        arm_angular_accelerations = (physics_state.arm_state.angular_velocities - self.previous_angular_velocities) / self.config.dt
+        self.previous_angular_velocities = physics_state.arm_state.angular_velocities.copy()
+
         # Convert sound_source_positions back to list format for Observation dataclass
         sound_source_positions_list = [pos for pos in sound_source_positions] if len(sound_source_positions) > 0 else []
 
-        return Observation(
-            arm_angles=physics_state.arm_state.angles.copy(),
-            arm_angular_velocities=physics_state.arm_state.angular_velocities.copy(),
-            end_effector_pos=end_effector_pos.copy(),
-            sound_intensity=sound_intensity,
-            sound_energy=sound_energy,
-            sound_energy_delta=sound_energy_delta,
-            sound_source_positions=sound_source_positions_list,
-            microphone_orientation=microphone_orientation
-        )
+        observation_mode = getattr(self.config, "observation_mode", "full").lower()
+        if observation_mode not in {"sensorimotor", "full"}:
+            raise ValueError(f"Unknown observation_mode: {self.config.observation_mode}")
+
+        if observation_mode == "full":
+            observation = Observation(
+                arm_angles=physics_state.arm_state.angles.copy(),
+                arm_angular_velocities=physics_state.arm_state.angular_velocities.copy(),
+                arm_angular_accelerations=arm_angular_accelerations.copy(),
+                last_torques=self.last_action.copy(),
+                sound_intensity=sound_intensity,
+                end_effector_pos=end_effector_pos.copy(),
+                sound_source_positions=sound_source_positions_list,
+                microphone_orientation=microphone_orientation,
+                link_lengths=np.array(self.config.link_lengths),
+                link_masses=np.array(self.config.link_masses),
+                joint_frictions=np.array(self.config.joint_frictions)
+            )
+        else:
+            observation = Observation(
+                arm_angles=physics_state.arm_state.angles.copy(),
+                arm_angular_velocities=physics_state.arm_state.angular_velocities.copy(),
+                arm_angular_accelerations=arm_angular_accelerations.copy(),
+                last_torques=self.last_action.copy(),
+                sound_intensity=sound_intensity
+            )
+
+        sound_metrics = {
+            "sound_intensity": sound_intensity,
+            "sound_energy": sound_energy,
+            "sound_energy_delta": sound_energy_delta
+        }
+
+        return observation, sound_metrics
 
     def get_render_data(self) -> Dict[str, Any]:
         """

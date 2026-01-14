@@ -83,7 +83,8 @@ class SoundFlower:
 
         # Get current state to accumulate sound energy
         environment_state = self.environment.get_state()
-        self.cumulative_sound_energy += environment_state.observation.sound_energy
+        if environment_state.sound_energy is not None:
+            self.cumulative_sound_energy += environment_state.sound_energy
 
         if self.agent:
             self.time_since_last_aciton += self.config.dt
@@ -116,7 +117,7 @@ class SoundFlower:
                 self.plotter.step(
                     self.step_count,
                     environment_state.reward,
-                    environment_state.observation.sound_energy,
+                    environment_state.sound_energy if environment_state.sound_energy is not None else 0.0,
                     self.cumulative_reward,
                     self.cumulative_sound_energy
                 )
@@ -153,7 +154,7 @@ class SoundFlower:
             self.plotter.step(
                 self.step_count,
                 environment_state.reward,
-                environment_state.observation.sound_energy,
+                environment_state.sound_energy if environment_state.sound_energy is not None else 0.0,
                 self.cumulative_reward,
                 self.cumulative_sound_energy
             )

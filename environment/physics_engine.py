@@ -164,10 +164,10 @@ class PhysicsEngine:
                 # Positive velocity_toward_source means moving toward source (bad)
                 velocity_toward_source = np.dot(end_effector_velocity, direction_to_source_normalized)
 
-                # Scale repulsion force to be proportional to max_torque
-                # This prevents repulsion from overwhelming agent control
-                # Use a scaling factor so repulsion is a fraction of max_torque
-                max_repulsion_force = 0.3 * self.config.max_torque  # 30% of max_torque
+                # Scale repulsion force using a lever-arm estimate so units are consistent.
+                # This keeps repulsion modest relative to actuator limits without mixing force/torque.
+                total_link_length = max(1e-6, float(np.sum(self.config.link_lengths)))
+                max_repulsion_force = 0.3 * (self.config.max_torque / total_link_length)
 
                 # Normalize violation by min_distance to get relative violation [0, 1]
                 violation = min_distance - distance

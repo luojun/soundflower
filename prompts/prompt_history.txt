@@ -461,3 +461,77 @@ implementations for different use cases (matplotlib for quick debugging, TensorB
 Implement unified PygameFramer that treats single-panel visualization as a 1×1 special case of multi-panel.
 This eliminates code duplication in @demo_all.py by extending @experimenter/animator/pygame_framer.py to handle
 multiple panels natively, while maintaining backward compatibility with single-panel usage in @demo.py.
+
+~~
+Ask
+~
+Now, we are about to embark on the journey of RL for this project. In preparation for that, we need to
+rectify the agent interfaces. Specifically, (1) those aspects of what is assumed in the current
+implementation as "robot body configurations", the robotic arm's link configurations, will need to be
+turned into observations. This is so that bodily changes will become observable. Additionally, (2) the
+"joint states", which the heuristic/control-theory-based agents currently use directly, should also
+become observations. These should include the joint angle, joint angular velocity, and joint angular
+acceleration. Thus, we have two groups of observations now. Could this be sensibly called
+"geometricl observations" and "physical observations"? That is one of the things that need to be
+reviewed and decided. The rationale of the distinction is that for an end-to-end RL agent, the
+geometric observations which are currently used by the control-theoretic agents and depend on external
+coordinate system should be banned and only physical observtions with local, i.e. egocentric-to-joint
+observations should be allowed. Finally, (3) a third group of observations should also be available.
+This group of "action observations" will be "efference copies" of the action commands, which
+currently is joint torque. Please review this proposal vis-a-vis the code, especially regarding making
+the current heuristic/control-theoretic agents use the new interfaces, as a test of the design and
+integration. Please assess the reasonableness and potential pitfalls. And please recommend designs
+and implementation choices for consideration.
+~
+Good considerations from a diversity of valid perspectives. Since the research is about scalable RL,
+rather than taking shortcuts to make a system "perform", allowing heurstic agents to break down due to
+partial observability and morphology change etc. is part of the point. It could make sense to
+differentiate the observation modes as "egocentric" and "full". And it is indeed important to also
+include sound power observation as part of the egocentric group. On the other hand, link mass, should
+not be part of the egocentric group, it seems. Issues with normalization will likely become important.
+But that will be handled later and hopefully in a prncipled way. Please synthesize all these into a
+concretely fleshed out proposal.
+~
+Sound source direction and distance in egocentric coordinates should not be included in the egocentric
+mode. The reason is that it assumes global geometry, even if the reference frame could be egocentric.
+Whether they should be included in the Full mode, is a separate discussion. But with sound source position,
+maybe that's unnecessary? Maybe the "egocentriic mode" should be called "basic mode"? Any better name?
+Morphology should be in full mode, because we will want to check how the contro-theoretic agents perform
+vis-a-vis the end-to-end RL agents as morphology changes.
+~~
+Agent
+~
+Let's go with "Sensorimotor", because this is a project that investigates sensorimotor abstraction.
+As to whether convience features are needed, that can be decided as the Full interface gets used.
+Now, please write up a prompt about the proposal and necessary implementation intrusctions and append
+the prompt to @prompts/prompt_history.txt .
+~
+Please implement a two-mode observation interface for RL: "Sensorimotor" and "Full".
+Sensorimotor mode should include only joint-local proprioception (angles, angular velocities, angular
+accelerations), action efference copy (last applied joint torques), and a scalar sound power/intensity
+observation. It must not include sound source direction or distance, nor any world-frame positions or
+morphology parameters. Full mode should include Sensorimotor plus morphology parameters (link lengths,
+masses, joint limits, frictions) and global information needed by control-theoretic agents (e.g., sound
+source positions, end-effector/link positions). Expose a config flag (e.g., observation_mode) to select
+the mode, update Observation/state construction accordingly, and refactor heuristic/control-theoretic
+agents to use the new Observation fields rather than accessing environment internals. Expect heuristic
+agents to degrade under Sensorimotor mode; this is acceptable and a useful test. Keep naming consistent
+and avoid adding convenience features until Full mode usage reveals a need.
+~~
+
+~~
+Ask
+~
+Now please examine implementation of the heuristic agents, for violation of our principled interfaces.
+For example, link_lengths should not be passed as a constructor argument, but ratehr observation values.
+The case of kp, kd, and max_torque is subtler. What are the choices here? max_torque certainly seems to
+fit for an observation element. Should kp and kd be made observable? Or should they be part of the action
+space? Or rather action space of some future meta-level controller that tunes kp and kd and thus here
+only in observations? Or we leave kp and kd as agent parameters?
+~~
+Agent
+~
+Please go ahead propose the exact refactor. But please be thorough in reviewing the current state of
+the code, because the four items discussed here may not be the only places where change is needed.
+~
+Remove max_torque from the agents.

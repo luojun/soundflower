@@ -10,15 +10,15 @@
 
 ##### Agent Interface
 
-- [ ] Geometric observations: make body configuration observable to accommodate configuration changes.
-- [ ] Physical observations: joint angle (relative to "up" link), joint angular velocity, and joint angular acceleration.
-- [ ] Action observations: motor commands (torque or angular jerk) -- "efference copy".
+- [x] Full observation mode: expose morphology params and world-frame geometry.
+- [x] Sensorimotor mode: joint angles, angular velocities, angular accelerations, plus sound intensity.
+- [x] Action observations: motor commands (torque or angular jerk) -- "efference copy".
 - [ ] Action: angular jerk instead of torque? (TAI!)
 
 ##### Agent
 
-- [ ] Classical model-based agent: uses both geometric observations and physical observations.
-- [ ] Baseline model-free RL agent: uses only physical observations and action observation.
+- [x] Classical model-based agent: uses full observation mode.
+- [ ] Baseline model-free RL agent: uses sensorimotor mode.
 - [ ] Continual model-free RL agent: uses only physical observations and action observation.
 - [ ] Model-free RL agents with the "sensorimotor abstraction architecture".
 - [ ] Exploration: link to the OaK architecture.

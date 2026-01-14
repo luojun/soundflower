@@ -14,18 +14,15 @@ class ApproachingAgent(BaseAgent):
     subject to IK optimization pressure.
     """
 
-    def __init__(self, kp: float = 5.0, kd: float = 0.5, max_torque: float = 10.0,
-                 link_lengths: np.ndarray = None):
+    def __init__(self, kp: float = 5.0, kd: float = 0.5):
         """
         Initialize approaching agent.
 
         Args:
             kp: Proportional gain for PD controller
             kd: Derivative gain for PD controller
-            max_torque: Maximum torque that can be applied (for clipping)
-            link_lengths: Array of link lengths for IK computation
         """
-        super().__init__(kp=kp, kd=kd, max_torque=max_torque, link_lengths=link_lengths)
+        super().__init__(kp=kp, kd=kd)
         self.target_angle = 0.0
 
     def select_action(self, observation: Observation) -> np.ndarray:
@@ -41,7 +38,7 @@ class ApproachingAgent(BaseAgent):
         Returns:
             action: Torques to apply at each joint
         """
-        if not observation.sound_source_positions:
+        if self._warn_if_missing_sources(observation):
             return np.zeros(len(observation.arm_angles))
 
         # Find nearest sound source
@@ -50,12 +47,16 @@ class ApproachingAgent(BaseAgent):
         nearest_idx = np.argmin(distances)
         source_pos = observation.sound_source_positions[nearest_idx]
 
+        link_lengths = self._get_link_lengths(observation)
+        if link_lengths is None:
+            return np.zeros(len(observation.arm_angles))
+
         # Optimize directly toward source position (position-only, orientation_weight=0.0 to ignore orientation)
         # The IK solver naturally handles unreachable targets by converging to the closest reachable point.
         # The physics engine enforces min_distance_to_source constraint automatically.
         desired_angles = self._solve_inverse_kinematics(
             current_angles=observation.arm_angles,
-            link_lengths=self.link_lengths,
+            link_lengths=link_lengths,
             target_pos=source_pos,
             target_orientation=None,
             position_weight=1.0,
