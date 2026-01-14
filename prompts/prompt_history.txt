@@ -440,3 +440,10 @@ violations while preserving goal-oriented agent behavior and preventing violent 
 
 ~
 Increased mass and friction to smooth out the dynamics.
+
+~
+Implement multiprocessing for @demo_all.py to parallelize the 6 independent simulation instances. Each
+SoundFlower instance should run in its own process, sending render data via multiprocessing.Queue to the
+main process which handles Pygame rendering and matplotlib plotting. This provides true parallelism (bypasses
+GIL) and scales with CPU cores. Keep @demo.py synchronous as threading provides minimal benefit for single
+instances. Use process-safe data structures and ensure proper cleanup on exit.

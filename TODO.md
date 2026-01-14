@@ -2,7 +2,9 @@
 
 ##### Simulation Performance
 
-- [ ] Instances of Soundflower (agent-body-environment triplet) on different threads or processes.
+- [x] Faster plotting.
+- [x] Instances of Soundflower (agent-body-environment triplet) on different threads or processes.
+- [ ] Use Tensorboard for demo_all.py.
 - [ ] Faster inverse kinematics solver?
 - [ ] Faster physics engine? (Note: burden is from "collision check" -- minimum distance to a sound source.)
 
