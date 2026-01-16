@@ -65,6 +65,16 @@ class BaseAgent(ABC):
         """
         pass
 
+    def observe(self, reward: float, observation: Observation) -> None:
+        """
+        Optional learning hook for agents that update from reward/observation.
+
+        Args:
+            reward: Reward received for the previous action.
+            observation: Current observation after transition.
+        """
+        return
+
     def _compute_target_angle_for_pointing(self, observation: Observation) -> float:
         """
         Compute target angle for end effector to point at nearest sound source.

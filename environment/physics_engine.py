@@ -72,6 +72,8 @@ class PhysicsEngine:
         Args:
             torques: Torques for each joint
         """
+        if not np.all(np.isfinite(torques)):
+            raise ValueError(f"Non-finite torques applied: {torques}")
         self.current_torques = np.clip(torques, -self.config.max_torque, self.config.max_torque)
 
     def get_state(self) -> PhysicsState:
@@ -220,3 +222,10 @@ class PhysicsEngine:
             self.state.arm_state,
             self.current_torques
         )
+        if (not np.all(np.isfinite(self.state.arm_state.angles)) or
+                not np.all(np.isfinite(self.state.arm_state.angular_velocities))):
+            raise RuntimeError(
+                "Non-finite arm state after physics step "
+                f"(angles={self.state.arm_state.angles}, "
+                f"angular_velocities={self.state.arm_state.angular_velocities})"
+            )

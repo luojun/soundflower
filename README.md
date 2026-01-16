@@ -1,7 +1,8 @@
 ### The Sound Flower
 
 Exploration in sensorimotor abstraction for embodied RL agents. 
-Reminiscent of "super-sunflower" in chapter 6 of [On the Origin of Objects](https://mitpress.mit.edu/9780262692090/on-the-origin-of-objects/) as well as [Rotato](https://www.semanticscholar.org/paper/Around-the-World-in-80-Steps-Or-How-to-Represent-Milligan-Milligan/9f517de67e4ad87aba2239b646ec67e96de00a8e).
+Inspirations from "super-sunflower" in chapter 6 of [On the Origin of Objects](https://mitpress.mit.edu/9780262692090/on-the-origin-of-objects/) as well as [Rotato](https://www.semanticscholar.org/paper/Around-the-World-in-80-Steps-Or-How-to-Represent-Milligan-Milligan/9f517de67e4ad87aba2239b646ec67e96de00a8e);
+also reminiscent of "sound world" in [Individuals](https://www.routledge.com/Individuals/Strawson/p/book/9780415178605) and "Things Without the Mind — A Commentary upon Chapter Two of Strawson’s Individuals" in [Collected Papers](https://academic.oup.com/book/50043) of Gareth Evans.
 
 ##### Overview
 

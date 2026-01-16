@@ -17,9 +17,9 @@
 
 ##### Agent
 
-- [x] Classical model-based agent: uses full observation mode.
-- [ ] Baseline model-free RL agent: uses sensorimotor mode.
-- [ ] Continual model-free RL agent: uses only physical observations and action observation.
+- [x] Classical model-based agent in full observation mode.
+- [x] Baseline linear reactive agent in sensorimotor mode.
+- [x] Continual linear model-free RL agent in sensorimotor mode.
 - [ ] Model-free RL agents with the "sensorimotor abstraction architecture".
 - [ ] Exploration: link to the OaK architecture.
 - [ ] Exploration: Soundflower as a computational neuroscience "animal model" for sensorimotor abstraction.
@@ -46,3 +46,9 @@
 - [ ] Evaluate in terms of life-time cumulative energy harvest.
 - [ ] Evaluate in terms of average latest N seconds of energy harvest.
 
+##### Research Topics
+
+- [ ] Unified active audition control: joint torques + mic array gains/phases.
+- [ ] Multi-mic sensing: how observation dimensionality affects stability/reacquisition.
+- [ ] Multi-source effects and interaction with mic-array sensing.
+- [ ] Auditory-motor contingencies for spatial learning (Strawson/Evans sound world).

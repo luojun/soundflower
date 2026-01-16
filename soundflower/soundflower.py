@@ -91,6 +91,8 @@ class SoundFlower:
 
             if self.time_since_last_aciton >= self.control_period:
                 self.cumulative_reward += environment_state.reward
+                if hasattr(self.agent, "observe"):
+                    self.agent.observe(environment_state.reward, environment_state.observation)
                 action = self.agent.select_action(environment_state.observation)
                 self.environment.apply_action(action)
 

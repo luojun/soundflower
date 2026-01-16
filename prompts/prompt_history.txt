@@ -535,3 +535,163 @@ Please go ahead propose the exact refactor. But please be thorough in reviewing 
 the code, because the four items discussed here may not be the only places where change is needed.
 ~
 Remove max_torque from the agents.
+~~
+
+~~
+Ask
+~
+Time for some RL fun. The next big step is the item on line 21 of @TODO.md .  We are to create an RL
+agent that learns and works in the sensorimotor mode. There are many considerations. The first is
+actually creating a heuristic agent that actually works at least to some extent in sensorimotor
+mode, unlike the current control-theoretic agents, which simply fail. Here we may draw inspiration
+from Braitenberg vehicles. Please design a Braitenberg-vehicle style heuristic agent that works in
+the sensorimotor mode.
+~
+The cross-coupled mapping (Braitenberg "love" vehicle) and direct mapping options are good
+ingredients. Could there be a design that is compatible with flexible number of joints? A single
+design that works for 1 or 2 or 3 joints? Have people been inspired to do multi-DOF Braitenberg
+robots?
+~
+Are phase-shifted oscillators a case of how central pattern generator is though to work?
+~
+Are the three options mentioned earlier, i.e. alternating sign, tapered pattern, and phase-shifted
+oscillators, really variation of the same scheme? They are just transition matrices or rather a
+"projecting vector" since the drive signal as sound intensity is a scalar. If we have a microphone
+array here, we will have a transition matrix, right? Then the matrix will be how to control the
+orientation and position of the microphone array. And if we are doing phase-shifteed 
+for motor control, we will be doing that for a phase-array microphone setup. Is this understanding
+correct?
+~
+What I was trying to say and said very cryptically is that the control of a microhone-phase-array
+through modulating individual microphone's gain and the control of the multi-joint robotic arm on
+which this microphone-array is mountd could be viewed as different aspects of the same control
+problem. Thus, in a multi-DOF, multi-mic, and multi-source setup, we could do a joint control
+scheme where the sum of individual mic's intensity delta is maximized.
+~
+Have people done something like this in practice or in research?
+~~
+Agent
+~
+Please do a bit of quick research on the single unified control formulation that explicitly 
+(I almost want to say implicitly because the control channels do not need to be marked!) treats
+joint torques and mic gains/phases as one action vector.
+~
+For now,  please summarize this bit as a topic in the form of a single to-do item under
+the "Research Topic" section of @TODO.md . 
+~~
+Ask
+~
+Back to the robotic arm control  part, how is a joint treated from the oscillator phase perspective?
+~
+Thus, phase here is understood in terms of difference between desired amplitude in time and current
+amplitude in time?
+~
+OK. Then, from the cotrol viewpoint, phase is the control knob.
+~
+Good. What is the movement cycle for a joint?
+~
+Can we treat linear actuators from this perspective too?
+~
+I see, like the piston-crankshaft stuff.
+~
+And we an linearize the sin function, then it's just simple dot product at work?
+~
+Fair enough. I'm concerned about minimal implementation, in which we do not necessarily want to
+even have sin functions. I'm also thinking about learning. Possibly continual RL with linear maps.
+The issue with basis features is certainly there.
+~
+Time to take stock. Please keep the above discussion around "Braitenberg-vehicle" style system in
+mind, recommend specific options of a principled and simple archicture friendly to learning that
+does reactive control under the sensorimotor mode without excessive control-theoretic elements.
+~
+Option 2 uses "eligibility trace"
+~
+I see. The memory elements here interact with A being non-diagonal and possibly non-symmetric.
+~~
+Agent
+~
+Cool. Please summarize Option 2 into a prompt and append to @prompts/prompt_history.txt .
+It should summarize the rationale of Option 2. In the code that's to be generated, the code
+naming and flow, as well as warranted comments, should make the rationale clear.
+~
+Please implement a minimal linear reactive controller as a baseline agent in the sensorimotor mode
+with a small leaky memory state `z` (linear dynamics `z_{t+1}=A z_t + B x_t`, action `τ=W z_t`).
+Rationale: stays sensorimotor-only, learning-friendly, and avoids explicit sinusoids; short-term
+memory enables oscillation/coordination via non-diagonal `A`, while `A=λI` reduces to an
+eligibility-trace-like decay. Ensure code naming, flow, and brief comments communicate this rationale.
+Adjust the organization of the @agents package according to need. Add a new demo according to need.
+~~
+Ask
+~
+Tried the code with both 3 links and 2 links. The agent runs well in the beginning.
+It was able to "capture" the sound source in the beginning. But once it loses the
+orbiting sound source, it started flapping the robotic arm and is unable to recapture
+it. For the 3-link case, this happens at around 45 seconds. For the 2-link case, it
+happens at around 110 seconds. What could be going on?
+~~
+Agent
+~
+Indeed, please produce a minimal tweak and preserve the spirit. Generate a prompt and
+append to @prompts/prompt_history.txt .
+~
+Please add a minimal tweak to the linear reactive baseline to prevent runaway flapping after
+loss of the source while preserving the simple linear spirit. Keep it sensorimotor-only and
+learning-friendly. Recommended minimal change: make A purely leaky (no rotational coupling)
+and add a light damping term proportional to joint angular velocities directly in the policy
+output, or decay/reset the memory state z when sound_intensity drops below a small threshold.
+Avoid adding complex control logic, and keep code changes small and well-commented. Document
+the choices with appropriate comments.
+~~
+Ask
+~
+It seems that the second choice is more RL friendly, because given that postive
+sound_intensity delta is our choice of reward, it is only natural to let memory decay
+when there is no adequate reward feedback. Keeping A as expresive a possible could be
+more useful for linear RL later. Is this correct?
+~~
+Agent
+~
+Go ahead implement the decay option.
+~
+Ask
+~
+Somewhat better in that it seems to keep the source longer. And after losing the source,
+it could still acquire some sound energy. But once losing the source, it could no longer
+require it. This could be related to the fact that in the beginning the arm's momentum
+was low. But once it starts moving, its momentum is high. It's almost as if when the
+target is lost, the robot's mechanical memory should also decay.
+~
+Is it reasonable to have the reward_threshold being zero? Does it make sense for the
+low_reward_decay and reward_threshold to be replace with a single, simple function
+of reward? Such as the time derivative of normalized reward? Or the normalized
+time derivative of the reward? Or something like that?
+~
+I'm thinking that maybe we should not attempt to introduce ad hoc complexity to make
+the reactive agent behave better. What matters is that there is a reactive pathway,
+that there is basic policy structure. The more principle approach is to use learning
+and continually real time adaptation to keep the system stable and steady etc. And
+eventually build out good spatial capability as sensorimotor abstraction.
+~~
+
+~~
+Agent
+~
+Please do a round of deep research into linear continual RL. Swift SARSA is one possible
+reference. Stream-x is another. But these all have nonlinear features, which we do not
+even have now, but which we very likely will need later. We could learn from their
+methods and architectural choices. We should also
+be mindful of earlier linear RL literatures that may be relevant. What we want is an
+architecture that could make our agent work well in adapting to environment variability
+even with a simple linear core. Please go ahead with the deep research and come back
+with a reviews and summaries of the more relevant options and possibly new options not
+in the literature but could work in our context. Please describe each of these options
+with their pros and cons. And make your recommendation as to which one or ones should
+be taken seriously.
+~
+Please implement a linear continual RL baseline using linear TD(λ) with adaptive step sizes
+(e.g., IDBD/AutoStep-style per-feature rates) plus a simple forgetting/decay mechanism to
+handle non-stationarity. Keep the policy linear with a fixed A (linear memory dynamics)
+and learn W online. Preserve sensorimotor-only observations. Provide a short note explaining
+why this is the minimal, principled baseline for continual adaptation. If possible, make
+this implementation extend the current or modified LinearReactiveAgent, so as to show
+cleary how the old reactive core is in the new continual RL agent.

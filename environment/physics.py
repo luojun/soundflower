@@ -47,6 +47,10 @@ class ArmPhysics:
             joint_positions: Array of (x, y) positions for each joint
             end_effector_pos: (x, y) position of end effector
         """
+        if not np.all(np.isfinite(angles)):
+            raise RuntimeError(f"Non-finite joint angles in forward_kinematics: {angles}")
+        if not np.all(np.isfinite(self.link_lengths)):
+            raise RuntimeError(f"Non-finite link lengths in forward_kinematics: {self.link_lengths}")
         joint_positions = np.zeros((self.num_links + 1, 2))
         cumulative_angle = 0.0
 
@@ -96,15 +100,31 @@ class ArmPhysics:
         Returns:
             new_state: Updated arm state
         """
+        if not np.all(np.isfinite(state.angles)):
+            raise RuntimeError(f"Non-finite angles entering physics step: {state.angles}")
+        if not np.all(np.isfinite(state.angular_velocities)):
+            raise RuntimeError(
+                f"Non-finite angular velocities entering physics step: {state.angular_velocities}"
+            )
+        if not np.all(np.isfinite(torques)):
+            raise RuntimeError(f"Non-finite torques entering physics step: {torques}")
 
         # Compute accelerations
         angular_accelerations = self.compute_dynamics(state, torques)
+        if not np.all(np.isfinite(angular_accelerations)):
+            raise RuntimeError(f"Non-finite angular accelerations: {angular_accelerations}")
 
         # Update velocities (Euler integration)
         new_angular_velocities = state.angular_velocities + angular_accelerations * self.dt
 
         # Update angles
         new_angles = state.angles + new_angular_velocities * self.dt
+        if not np.all(np.isfinite(new_angles)):
+            raise RuntimeError(f"Non-finite angles after physics step: {new_angles}")
+        if not np.all(np.isfinite(new_angular_velocities)):
+            raise RuntimeError(
+                f"Non-finite angular velocities after physics step: {new_angular_velocities}"
+            )
 
         return ArmState(angles=new_angles, angular_velocities=new_angular_velocities)
 

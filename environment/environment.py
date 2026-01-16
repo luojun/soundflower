@@ -114,6 +114,8 @@ class Environment:
         joint_positions, end_effector_pos = self.physics_engine.arm_physics.forward_kinematics(
             physics_state.arm_state.angles
         )
+        if not np.all(np.isfinite(end_effector_pos)):
+            raise RuntimeError(f"Non-finite end effector position: {end_effector_pos}")
 
         # Compute microphone orientation (direction of outmost link from base)
         # Orientation is the cumulative angle of all joints
@@ -166,10 +168,19 @@ class Environment:
 
         sound_energy_delta = sound_energy - self.previous_sound_energy
         self.previous_sound_energy = sound_energy
+        if (not np.isfinite(sound_intensity) or
+                not np.isfinite(sound_energy) or
+                not np.isfinite(sound_energy_delta)):
+            raise RuntimeError(
+                "Non-finite sound metrics "
+                f"(intensity={sound_intensity}, energy={sound_energy}, delta={sound_energy_delta})"
+            )
 
         # Joint angular accelerations (finite difference)
         arm_angular_accelerations = (physics_state.arm_state.angular_velocities - self.previous_angular_velocities) / self.config.dt
         self.previous_angular_velocities = physics_state.arm_state.angular_velocities.copy()
+        if not np.all(np.isfinite(arm_angular_accelerations)):
+            raise RuntimeError(f"Non-finite angular accelerations: {arm_angular_accelerations}")
 
         # Convert sound_source_positions back to list format for Observation dataclass
         sound_source_positions_list = [pos for pos in sound_source_positions] if len(sound_source_positions) > 0 else []
