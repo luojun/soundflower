@@ -748,3 +748,43 @@ each agent type, and move `test_energy_plausibility.py` into that package. Run t
 test suite to validate the refactor. Also run the demos in headless mode and verify
 they execute without errors.
 ~~
+
+~~
+Ask
+~
+Let's start thinking about variability. The section titled "Body+Environment Variability"
+starting on line 27 of @TODO.md has an initial list of things to consider. What we should
+aim at is meaningful, realistic, and simple-to-implement variabilities that pose significant
+challenges to an agent such that continual learning becomes essential. Please take to
+heart the project's overall vision and trajectory: sensorimotor abstraction
+supported by continual RL over sensorimotor contingency. Please also be very clear-headed
+and open-minded in questioning and critiqueing any choices or options so that they are
+principled. What are some variabilities that should be considered first? Grounded and
+principled analaysis please.
+~
+Four more principles: (1) all changes or variabilities should be those that could happen
+in the real-world in a what that is continuous in time without needing to reset or
+restart the environment or the body; thus for example, the reduction of the number of
+links in the arm better be treated as one joint becomes frozen; and in general, directional
+drifting rather than random walk might be preferred, as well as something that is recognizably
+"wear and tear"; (2) a heustic principle here is that the soundflower environment is a
+cocktail party, with people (sound sources) coming and going, circling each other for a
+while and then gone, or dashing around to say hello; (3) breaking control-theoretic
+agents or any agent at all is precisely not a concern, if the variability is reasonable,
+realisitc and meaingful -- that it may be challenging for particular approach just means
+that approach is limited; (4) there is also a bit of UI consideration here in that
+visualization should be natural enough and a human user should be able to tweak such
+variability easily through GUI or keyboard.
+
+With these and keeping the overall picture in mind, I would think that changing microphoe
+gain is probably not warranted early on. Adding mild noise to any dynamics may be something
+to consider, but it does not seem urgent. Time step and control frequency are important,
+but they are less of a concern for now. The hope is that a continually learning agent
+*should* be easier to tune or may not need tuning at all because it should not be overly
+sensitive to the simulation parameters so long as they are generally reasonable.
+
+What are the real first-priority variabilities then? And which other ones are worth putting
+into the TODO list for later?
+~
+All very reasonable. Please turn this into a TODO list for @TODO.md
+so that these variabilities and their UI choices are all listed.

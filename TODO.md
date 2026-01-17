@@ -26,19 +26,35 @@
 
 ##### Body+Environment Variability
 
+**First**
+
 - [ ] Variation in ortibal velocity of sound source.
-- [ ] Variation in radius of sound source orbit.
-- [ ] Variation in number of sound sources.
-- [ ] Variation in friction of joints.
+- [ ] Variation in orbit radius (slow drift).
+- [ ] Variation in number of active sources (1–2 initially).
+
+**Second**
+
+- [ ] Variation in joint friction (slow drift).
+- [ ] Variation in link lengths and mass (slow drift).
 - [ ] Variation in range of joint rotation.
-- [ ] Variation in length of body links.
-- [ ] Level of observation noise.
-- [ ] Level of body+environment dynamics noise.
+
+**Future consideration**
+
+- [ ] Sound source lifecycle: smooth appear/fade, linger, depart (cocktail-party arrivals/departures).
+- [ ] Sound source trajectories with directional drift + occasional “dash” events.
+- [ ] Actuator weakening over time (effective torque scaling / max torque decay).
+- [ ] Joint degradation: gradual stiffening or “frozen” joint (continuous, no reset).
+- [ ] Level of observation noise (mild, later).
+- [ ] Level of body+environment dynamics noise (mild, later).
+- [ ] Microphone gain drift (later).
+- [ ] Control frequency / time step drift (later).
 
 ##### UI
 
-- [ ] "Conductor" GUI for controlling body+environment variability.
-- [ ] "Conductor" keyboard UI for controlling body+environment variability.
+- [ ] Improve UI, animation, and plotting for easiness, visual impact and clarity.
+- [ ] “Conductor” GUI to control variability in real time.
+- [ ] “Conductor” keyboard UI for real-time variability control.
+
 
 ##### Experiment and Evaluation
 
