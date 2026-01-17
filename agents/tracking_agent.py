@@ -3,9 +3,10 @@
 import numpy as np
 from environment import Observation
 from .base_agent import BaseAgent
+from .pd_ik_mixin import PDControlMixin
 
 
-class TrackingAgent(BaseAgent):
+class TrackingAgent(PDControlMixin, BaseAgent):
     """
     Agent that both points toward and minimizes distance to the sound source.
 

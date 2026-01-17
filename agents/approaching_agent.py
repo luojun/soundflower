@@ -3,9 +3,10 @@
 import numpy as np
 from environment import Observation
 from .base_agent import BaseAgent
+from .pd_ik_mixin import PDControlMixin
 
 
-class ApproachingAgent(BaseAgent):
+class ApproachingAgent(PDControlMixin, BaseAgent):
     """
     Agent that only minimizes distance to the sound source.
 

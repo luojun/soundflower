@@ -1,16 +1,15 @@
 """Demo script running all three agents in two body configurations simultaneously for
 side-by-side comparison."""
 
+import copy
 import sys
 import time
 import pygame
-import numpy as np
 import multiprocessing
-from typing import Dict, Any, Optional
 from environment import Environment
-from agents.pointing_agent import PointingAgent
-from agents.approaching_agent import ApproachingAgent
 from agents.tracking_agent import TrackingAgent
+from agents.linear_reactive_agent import LinearReactiveAgent
+from agents.continual_linear_rl_agent import ContinualLinearRLAgent
 from experimenter import create_default_config, Logger
 from experimenter.animator import Animator
 from experimenter.plotter import create_plotter
@@ -160,9 +159,9 @@ class MultiAgentDemo:
         self.config_cache = {}  # Cache configs for rendering
 
         agent_configs = [
-            ("PointingAgent", PointingAgent, (255, 100, 100)),  # Red
-            ("ApproachingAgent", ApproachingAgent, (100, 255, 100)),  # Green
-            ("TrackingAgent", TrackingAgent, (100, 100, 255)),  # Blue
+            ("TrackingAgent", TrackingAgent, (100, 100, 255), "full"),  # Blue
+            ("LinearReactiveAgent", LinearReactiveAgent, (255, 100, 100), "sensorimotor"),  # Red
+            ("ContinualLinearRLAgent", ContinualLinearRLAgent, (100, 255, 100), "sensorimotor"),  # Green
         ]
         link_configs = [
             (config_2link, "2-link"),
@@ -170,8 +169,11 @@ class MultiAgentDemo:
         ]
 
         for link_config, link_name in link_configs:
-            for agent_name, agent_class, color in agent_configs:
+            for agent_name, agent_class, color, observation_mode in agent_configs:
                 full_agent_name = f"{agent_name}_{link_name}"
+                agent_config = copy.deepcopy(link_config)
+                agent_config.observation_mode = observation_mode
+                agent_config.__post_init__()
 
                 # Create command queue for this simulation
                 command_queue = multiprocessing.Queue()
@@ -182,13 +184,13 @@ class MultiAgentDemo:
                     'agent_name': full_agent_name,
                     'color': color,
                     'link_name': link_name,
-                    'config': link_config
+                    'config': agent_config
                 })
 
                 # Create and start worker process
                 process = multiprocessing.Process(
                     target=simulation_worker,
-                    args=(link_config, agent_class, full_agent_name, link_name, command_queue, self.data_queue)
+                    args=(agent_config, agent_class, full_agent_name, link_name, command_queue, self.data_queue)
                 )
                 process.start()
                 self.processes.append(process)
@@ -330,13 +332,13 @@ class MultiAgentDemo:
         print("=" * 60)
         print("\nRunning six instances simultaneously:")
         print("  Row 1 (2-link arms):")
-        print("    - PointingAgent (Red): Only orients toward sound source")
-        print("    - ApproachingAgent (Green): Only minimizes distance")
-        print("    - TrackingAgent (Blue): Both points and minimizes distance")
+        print("    - TrackingAgent (Blue, Full): Points and minimizes distance")
+        print("    - LinearReactiveAgent (Red, Sensorimotor): Minimal linear reactor")
+        print("    - ContinualLinearRLAgent (Green, Sensorimotor): Online TD(λ) learner")
         print("  Row 2 (3-link arms):")
-        print("    - PointingAgent (Red): Only orients toward sound source")
-        print("    - ApproachingAgent (Green): Only minimizes distance")
-        print("    - TrackingAgent (Blue): Both points and minimizes distance")
+        print("    - TrackingAgent (Blue, Full): Points and minimizes distance")
+        print("    - LinearReactiveAgent (Red, Sensorimotor): Minimal linear reactor")
+        print("    - ContinualLinearRLAgent (Green, Sensorimotor): Online TD(λ) learner")
         print("=" * 60)
         print("\nTensorBoard logging enabled.")
         print("To view metrics, run: tensorboard --logdir=logs")

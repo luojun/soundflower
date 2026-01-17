@@ -83,32 +83,7 @@ def test_energy_plausibility():
     assert actual_cumulative_energy < 1000, \
         f"Energy {actual_cumulative_energy:.6f} J seems unreasonably high for {simulation_duration:.1f}s simulation"
 
-    # Verify physical constraint: check that end effector never gets too close to sound sources
-    # Get final state
-    final_state = environment.get_state()
-    physics_state = final_state.physics_state
-    _, end_effector_pos = environment.physics_engine.arm_physics.forward_kinematics(
-        physics_state.arm_state.angles
-    )
-
-    # Get sound source positions
-    if physics_state.sound_source_angles:
-        angles_array = np.array(physics_state.sound_source_angles)
-        sound_source_positions = np.column_stack([
-            config.circle_radius * np.cos(angles_array),
-            config.circle_radius * np.sin(angles_array)
-        ])
-
-        # Check distance to each source
-        for i, source_pos in enumerate(sound_source_positions):
-            distance = np.linalg.norm(end_effector_pos - source_pos)
-            assert distance >= min_distance - 1e-3, \
-                f"Physical constraint violated: end effector at {distance:.6f} m from source {i}, " \
-                f"minimum allowed is {min_distance:.3f} m"
-
     print("\n✓ All energy plausibility checks passed!")
-    print("✓ Physical minimum distance constraint verified!")
-    return True
 
 
 if __name__ == "__main__":

@@ -695,3 +695,56 @@ and learn W online. Preserve sensorimotor-only observations. Provide a short not
 why this is the minimal, principled baseline for continual adaptation. If possible, make
 this implementation extend the current or modified LinearReactiveAgent, so as to show
 cleary how the old reactive core is in the new continual RL agent.
+
+~~
+Ask
+~
+We want to prepare for a bit of refactoring of the @agents package and the demos. This
+is partly in preparation for the next phase of the project, which is to introduce
+variability into the environment and the body.
+
+Things to consider: (1) currently @BaseAgent assumes PD control, which should be updated to
+be more compatible with all sorts of agent types; (2) the namings of specific agent
+types follow two patterns, either behavior (pointing, tracking, and approaching) or
+method (linear_reactive and continual_linear_rl) -- we need to clarify and unify; (3) the
+@demo_all naming is no longer appropriate; (4) if we have a demo_all, which agents should
+we include? all of them? (5) should we consider a demos package and leave only a single
+primary demo that is very inviting and reflects the spirit of this project at the topic
+level?
+
+Please analyze the situation and propose options.
+~
+Use the currently best sensorimotor learner as the primary demo.py is a good idea.
+The demo suite containing one controller agent (maybe the tracking one instead of the
+pointing one? What are the pros and cons here?), one reactive agent,
+and one learning agent is also a good idea. Thus, Option B seems to be largely good.
+But not sure what "Exploration" means in "ExplorationLinearReactive" and
+"ExplorationContinualRL". One consideration is to simply call these two "LinearReactor"
+and "ExperentialLearner"/"LinearLearner". But please think and critique these choices
+from multiple perspectives. One thing to note is that the control-theoretic agents
+have a predefined "behavior" (Pointing, Tracking, or Approaching) but for the "Reactor"
+and "Learner" that's not predefined.
+~~
+Agent
+~
+Let's go with LinearReactiveAgent and ContinualLinearRLAgent. Please write a prompt
+for this refactoring that also includes what was decided above in the discussion
+and append it below.
+~
+Please refactor @agents and demos with the following decisions:
+1) Keep the method-based names for the non-behavior agents: `LinearReactiveAgent` and
+   `ContinualLinearRLAgent`. Do not introduce "Exploration" naming.
+2) Keep behavior-based names for PD/IK agents (Pointing/Tracking/Approaching), but
+   remove PD assumptions from @BaseAgent by moving PD/IK helpers into a mixin or helper
+   utility so that BaseAgent is a minimal interface for diverse agent types.
+3) Rename @demo_all to a demo suite (e.g., `demo_suite.py`) and make a single inviting
+   `demo.py` the primary entry point using the currently best sensorimotor learner.
+4) The demo suite should include: one controller agent (consider Tracking vs Pointing,
+   note pros/cons), one reactive agent, and one learning agent.
+5) Keep the refactor minimal and coherent; update imports/exports and any docs to match.
+~
+Please create a `tests` package following Python testing conventions. Add tests for
+each agent type, and move `test_energy_plausibility.py` into that package. Run the full
+test suite to validate the refactor. Also run the demos in headless mode and verify
+they execute without errors.
+~~

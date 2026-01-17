@@ -3,9 +3,10 @@
 import numpy as np
 from environment import Observation
 from .base_agent import BaseAgent
+from .pd_ik_mixin import PDControlMixin
 
 
-class PointingAgent(BaseAgent):
+class PointingAgent(PDControlMixin, BaseAgent):
     """
     Agent that only orients the microphone toward the sound source.
 

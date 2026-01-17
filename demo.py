@@ -2,9 +2,8 @@
 
 import sys, time
 import pygame
-import numpy as np
 from environment import Environment
-from agents.tracking_agent import TrackingAgent
+from agents.continual_linear_rl_agent import ContinualLinearRLAgent
 from experimenter import create_default_config, Logger
 from experimenter.animator import Animator
 from experimenter.plotter import create_plotter
@@ -14,7 +13,7 @@ from soundflower import SoundFlower
 def main(headless: bool = False):
     """Run demo with optional animation."""
     print("=" * 60)
-    print("Sound Flower - Robotic Arm Sound Source Tracking Demo")
+    print("Sound Flower - Continual Linear RL Baseline (Sensorimotor)")
     print("=" * 60)
 
     if headless:
@@ -32,15 +31,16 @@ def main(headless: bool = False):
 
     print("=" * 60)
 
-    # Create 3-link configuration
+    # Create 2-link sensorimotor configuration
     config = create_default_config(sound_source_angular_velocity=0.3)
-    config.num_links = 3
-    config.link_lengths = [0.5, 0.4, 0.3]
-    config.link_masses = [6.0, 6.0, 3.0]
-    config.joint_frictions = [1.0, 1.0, 1.0]
+    config.num_links = 2
+    config.link_lengths = [0.6, 0.4]
+    config.link_masses = [6.0, 6.0]
+    config.joint_frictions = [1.0, 1.0]
+    config.observation_mode = "sensorimotor"
     config.__post_init__()  # Ensure configuration is validated
     environment = Environment(config)
-    agent = TrackingAgent()
+    agent = ContinualLinearRLAgent()
     # Identify logger and plotter by agent type
     agent_name = agent.__class__.__name__
     logger = Logger(agent_name=agent_name)

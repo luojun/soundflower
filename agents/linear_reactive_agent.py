@@ -29,8 +29,7 @@ class LinearReactiveAgent(BaseAgent):
                  use_intensity_delta: bool = True,
                  low_reward_decay: float = 0.8,
                  reward_threshold: float = 0.0):
-        # BaseAgent fields are unused but required by the interface
-        super().__init__(kp=0.0, kd=0.0)
+        super().__init__()
         self.memory_size = memory_size
         self.decay = decay
         self.coupling = coupling

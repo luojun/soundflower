@@ -32,13 +32,13 @@ pip install -r requirements.txt
 Run the demo with animation:
 
 ```bash
-python3 demo.py # Or demo_all.py
+python3 demo.py # Or demo_suite.py
 ```
 
 Run the demo in headless mode (no animation, faster execution):
 
 ```bash
-python3 demo.py --headless # or demo_all.py --headless
+python3 demo.py --headless # or demo_suite.py --headless
 ```
 
 ##### Heuristic Agents
