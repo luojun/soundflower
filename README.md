@@ -27,6 +27,13 @@ Sound Flower is a 2D robotic arm reinforcement learning environment where an age
 pip install -r requirements.txt
 ```
 
+Depending on your system, you may also need to install Tkinter (a Matplotlit
+dependency) with something like:
+
+```
+apt-get install python3-tk
+```
+
 ## Quick Start
 
 Run the demo with animation:
