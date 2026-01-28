@@ -226,6 +226,21 @@ class PygameFramer:
         self._draw_text(f"Dist: {distance_to_source:.3f}",
                        (x_offset, y_offset), self.small_font)
 
+        # Variability information
+        y_offset += 20
+        num_active = render_data.get('num_active_sources', 1)
+        self._draw_text(f"Active Sources: {num_active}", (x_offset, y_offset), self.small_font, (200, 255, 200))
+        y_offset += 18
+        current_radius = render_data.get('current_orbit_radius', 1.0)
+        radius_range = render_data.get('orbit_radius_range', (0.8, 1.2))
+        self._draw_text(f"Radius: {current_radius:.2f} [{radius_range[0]:.2f}, {radius_range[1]:.2f}]",
+                       (x_offset, y_offset), self.small_font, (200, 255, 200))
+        y_offset += 18
+        current_speed = render_data.get('current_orbital_speed', 0.0)
+        speed_range = render_data.get('orbital_speed_range', (-0.5, 0.5))
+        self._draw_text(f"Speed: {current_speed:.2f} [{speed_range[0]:.2f}, {speed_range[1]:.2f}]",
+                       (x_offset, y_offset), self.small_font, (200, 255, 200))
+
     def render_frame(self, render_data_list, agent_names=None) -> bool:
         """
         Callback function for visualization loop.

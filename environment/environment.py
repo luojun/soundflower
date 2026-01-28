@@ -234,9 +234,11 @@ class Environment:
 
         if physics_state.sound_source_angles:
             angles_array = np.array(physics_state.sound_source_angles)
+            # Use current orbit radius (which may vary)
+            current_radius = self.physics_engine.current_orbit_radius
             sound_source_positions = np.column_stack([
-                self.config.circle_radius * np.cos(angles_array),
-                self.config.circle_radius * np.sin(angles_array)
+                current_radius * np.cos(angles_array),
+                current_radius * np.sin(angles_array)
             ])
         else:
             sound_source_positions = np.array([]).reshape(0, 2)
@@ -266,6 +268,12 @@ class Environment:
             'circle_radius': self.config.circle_radius,
             'arm_state': physics_state.arm_state,
             'sound_intensity': sound_intensity,
-            'sound_energy': sound_intensity * self.config.microphone_area * self.config.dt  # Area × dt for rendering
+            'sound_energy': sound_intensity * self.config.microphone_area * self.config.dt,  # Area × dt for rendering
+            # Variability information
+            'num_active_sources': self.physics_engine.config.num_active_sources,
+            'current_orbit_radius': self.physics_engine.current_orbit_radius,
+            'orbit_radius_range': (self.physics_engine.config.orbit_radius_min, self.physics_engine.config.orbit_radius_max),
+            'current_orbital_speed': self.physics_engine.current_orbital_speed,
+            'orbital_speed_range': (self.physics_engine.config.orbital_speed_min, self.physics_engine.config.orbital_speed_max)
         }
 

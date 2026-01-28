@@ -54,9 +54,41 @@ class PhysicsEngine:
         # Current torques (set by control loop)
         self.current_torques = np.zeros(config.num_links)
 
+        # Variability state (runtime values that drift over time)
+        self.current_orbit_radius = (config.orbit_radius_min + config.orbit_radius_max) / 2.0
+        self.current_orbital_speed = (config.orbital_speed_min + config.orbital_speed_max) / 2.0
+        # Drift direction: +1 or -1, changes when hitting bounds
+        self.orbit_radius_drift_dir = 1.0
+        self.orbital_speed_drift_dir = 1.0
+
         # Running state
         self.running = False
 
+    def set_num_active_sources(self, num: int):
+        """Set number of active sound sources (1-3)."""
+        self.config.num_active_sources = max(1, min(3, int(num)))
+
+    def set_orbit_radius_range(self, min_radius: float, max_radius: float):
+        """Set orbit radius variability range."""
+        self.config.orbit_radius_min = max(0.1, min_radius)
+        self.config.orbit_radius_max = max(self.config.orbit_radius_min, max_radius)
+        # Clamp current radius to new range
+        self.current_orbit_radius = np.clip(
+            self.current_orbit_radius,
+            self.config.orbit_radius_min,
+            self.config.orbit_radius_max
+        )
+
+    def set_orbital_speed_range(self, min_speed: float, max_speed: float):
+        """Set orbital speed variability range."""
+        self.config.orbital_speed_min = min_speed
+        self.config.orbital_speed_max = max(max_speed, min_speed)
+        # Clamp current speed to new range
+        self.current_orbital_speed = np.clip(
+            self.current_orbital_speed,
+            self.config.orbital_speed_min,
+            self.config.orbital_speed_max
+        )
 
     def _initialize_sound_sources(self):
         """Initialize sound sources."""
@@ -87,13 +119,15 @@ class PhysicsEngine:
 
     def _get_sound_source_positions(self) -> np.ndarray:
         """Get current sound source positions."""
-        if not self.state.sound_source_angles:
+        # Only use active sources (first num_active_sources)
+        num_active = min(self.config.num_active_sources, len(self.state.sound_source_angles))
+        if num_active == 0:
             return np.array([]).reshape(0, 2)
 
-        angles_array = np.array(self.state.sound_source_angles)
+        angles_array = np.array(self.state.sound_source_angles[:num_active])
         positions = np.column_stack([
-            self.config.circle_radius * np.cos(angles_array),
-            self.config.circle_radius * np.sin(angles_array)
+            self.current_orbit_radius * np.cos(angles_array),
+            self.current_orbit_radius * np.sin(angles_array)
         ])
         return positions
 
@@ -206,11 +240,35 @@ class PhysicsEngine:
                 break  # Only apply repulsion for first violation
 
     def step(self):
-        # Update sound sources
-        if self.config.sound_source_angular_velocity != 0.0:
-            for i in range(len(self.state.sound_source_angles)):
+        # Update variability parameters with slow drift
+        # Orbit radius drift
+        radius_drift = self.config.orbit_radius_drift_rate * self.config.dt * self.orbit_radius_drift_dir
+        self.current_orbit_radius += radius_drift
+        # Bounce off bounds
+        if self.current_orbit_radius >= self.config.orbit_radius_max:
+            self.current_orbit_radius = self.config.orbit_radius_max
+            self.orbit_radius_drift_dir = -1.0
+        elif self.current_orbit_radius <= self.config.orbit_radius_min:
+            self.current_orbit_radius = self.config.orbit_radius_min
+            self.orbit_radius_drift_dir = 1.0
+
+        # Orbital speed drift
+        speed_drift = self.config.orbital_speed_drift_rate * self.config.dt * self.orbital_speed_drift_dir
+        self.current_orbital_speed += speed_drift
+        # Bounce off bounds
+        if self.current_orbital_speed >= self.config.orbital_speed_max:
+            self.current_orbital_speed = self.config.orbital_speed_max
+            self.orbital_speed_drift_dir = -1.0
+        elif self.current_orbital_speed <= self.config.orbital_speed_min:
+            self.current_orbital_speed = self.config.orbital_speed_min
+            self.orbital_speed_drift_dir = 1.0
+
+        # Update sound sources with current orbital speed
+        if abs(self.current_orbital_speed) > 1e-6:
+            num_active = min(self.config.num_active_sources, len(self.state.sound_source_angles))
+            for i in range(num_active):
                 self.state.sound_source_angles[i] += (
-                    self.config.sound_source_angular_velocity * self.config.dt
+                    self.current_orbital_speed * self.config.dt
                 )
 
         # Enforce minimum distance constraint using soft repulsion force

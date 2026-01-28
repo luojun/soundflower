@@ -788,3 +788,26 @@ into the TODO list for later?
 ~
 All very reasonable. Please turn this into a TODO list for @TODO.md
 so that these variabilities and their UI choices are all listed.
+
+~~
+Agent
+~
+We are not ready to introduce some variabilities into the environment. Let's focus
+on the **First** batch listed in @TODO.md. When we implement this first batch of
+variabilities, we should also introduce the corresponding UI, for interactively
+(1) changing the number of sources (1, 2, or 3), (2) changing the *range* of the
+variability of the orbit radius, and (3) changing the *range* of the variability
+of the orbiting speed, where we could use negative number to indicate
+counterclockwise orbiting. Generate a succinct but clear prompt and append it to
+the prompt_history file.
+~
+Implement the first batch of environment variabilities from TODO.md:
+(1) variation in orbital velocity of sound sources (with slow drift over time),
+(2) variation in orbit radius (slow drift), and (3) variation in number of active
+sources (1 to 3). Add interactive UI controls to adjust in real-time:
+(a) number of active sources (1, 2, or 3), (b) range of orbit radius variability
+(min/max bounds), and (c) range of orbital speed variability (min/max bounds,
+where negative values indicate counterclockwise rotation). The variabilities
+should apply continuously during simulation without requiring resets, and the
+UI should allow live adjustment of these parameters.
+~

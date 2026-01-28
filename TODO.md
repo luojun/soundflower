@@ -30,7 +30,7 @@
 
 - [ ] Variation in ortibal velocity of sound source.
 - [ ] Variation in orbit radius (slow drift).
-- [ ] Variation in number of active sources (1–2 initially).
+- [ ] Variation in number of active sources (1 to 3).
 
 **Second**
 
@@ -51,6 +51,7 @@
 
 ##### UI
 
+- [ ] “Conductor” GUI to control variability in real time.
 - [ ] Improve UI, animation, and plotting for easiness, visual impact and clarity.
 - [ ] “Conductor” GUI to control variability in real time.
 - [ ] “Conductor” keyboard UI for real-time variability control.

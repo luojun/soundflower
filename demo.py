@@ -28,6 +28,10 @@ def main(headless: bool = False):
         print("  3: Pause and step forward 1000 steps")
         print("  4: Pause and step forward 10000 steps")
         print("  ESC or Q: Quit")
+        print("\nVariability Controls:")
+        print("  S: Cycle number of active sources (1 -> 2 -> 3 -> 1)")
+        print("  R: Increase orbit radius max, Shift+R: Decrease orbit radius min")
+        print("  V: Increase orbital speed max, Shift+V: Decrease orbital speed min (more negative)")
 
     print("=" * 60)
 
@@ -83,6 +87,45 @@ def main(headless: bool = False):
                             soundflower.forward(10000)
                         elif event.key in (pygame.K_ESCAPE, pygame.K_q):
                             should_quit = True
+                        # Variability controls
+                        elif event.key == pygame.K_s:
+                            # Cycle number of active sources: 1 -> 2 -> 3 -> 1
+                            current = environment.physics_engine.config.num_active_sources
+                            new_num = (current % 3) + 1
+                            environment.physics_engine.set_num_active_sources(new_num)
+                            print(f"Active sources: {new_num}")
+                        elif event.key == pygame.K_r:
+                            # Increase orbit radius max
+                            config = environment.physics_engine.config
+                            new_max = config.orbit_radius_max + 0.1
+                            environment.physics_engine.set_orbit_radius_range(
+                                config.orbit_radius_min, new_max
+                            )
+                            print(f"Orbit radius range: [{config.orbit_radius_min:.2f}, {new_max:.2f}]")
+                        elif event.key == pygame.K_r and event.mod & pygame.KMOD_SHIFT:
+                            # Decrease orbit radius min
+                            config = environment.physics_engine.config
+                            new_min = max(0.1, config.orbit_radius_min - 0.1)
+                            environment.physics_engine.set_orbit_radius_range(
+                                new_min, config.orbit_radius_max
+                            )
+                            print(f"Orbit radius range: [{new_min:.2f}, {config.orbit_radius_max:.2f}]")
+                        elif event.key == pygame.K_v:
+                            # Increase orbital speed max
+                            config = environment.physics_engine.config
+                            new_max = config.orbital_speed_max + 0.1
+                            environment.physics_engine.set_orbital_speed_range(
+                                config.orbital_speed_min, new_max
+                            )
+                            print(f"Orbital speed range: [{config.orbital_speed_min:.2f}, {new_max:.2f}] rad/s")
+                        elif event.key == pygame.K_v and event.mod & pygame.KMOD_SHIFT:
+                            # Decrease orbital speed min (more negative = faster counterclockwise)
+                            config = environment.physics_engine.config
+                            new_min = config.orbital_speed_min - 0.1
+                            environment.physics_engine.set_orbital_speed_range(
+                                new_min, config.orbital_speed_max
+                            )
+                            print(f"Orbital speed range: [{new_min:.2f}, {config.orbital_speed_max:.2f}] rad/s")
 
             if should_quit:
                 break

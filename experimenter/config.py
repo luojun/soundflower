@@ -45,6 +45,15 @@ class SoundFlowerConfig:
     sound_source_angular_velocity: float = 0.0  # Angular velocity for moving sound source (rad/s)
     sound_source_initial_angle: float = 0.0  # Initial angle of sound source (rad)
 
+    # Variability configuration (First batch)
+    num_active_sources: int = 1  # Number of active sound sources (1-3), runtime adjustable
+    orbit_radius_min: float = 0.8  # Minimum orbit radius (meters)
+    orbit_radius_max: float = 1.2  # Maximum orbit radius (meters)
+    orbit_radius_drift_rate: float = 0.01  # Rate of slow drift for orbit radius (per second)
+    orbital_speed_min: float = -0.5  # Minimum orbital speed (rad/s, negative = counterclockwise)
+    orbital_speed_max: float = 0.5  # Maximum orbital speed (rad/s)
+    orbital_speed_drift_rate: float = 0.02  # Rate of slow drift for orbital speed (per second)
+
     # Reward normalization
     reward_normalization_factor: float = None  # Auto-computed if None
 
@@ -94,13 +103,18 @@ def create_default_config(sound_source_angular_velocity: float = 0.2) -> SoundFl
         circle_radius=1.0,
         num_microphones=1,
         microphone_gain=1.0,
-        num_sound_sources=1,
+        num_sound_sources=3,  # Initialize 3 sources to support variability (1-3 active)
         sound_source_strength=2.0,
         sound_attenuation_coeff=1.0,
         min_distance_to_source=0.2,
         dt=0.01,
         max_torque=2.0,
         sound_source_angular_velocity=sound_source_angular_velocity,
-        sound_source_initial_angle=np.pi / 4  # Start at 45 degrees
+        sound_source_initial_angle=np.pi / 4,  # Start at 45 degrees
+        num_active_sources=1,  # Start with 1 active source
+        orbit_radius_min=0.8,
+        orbit_radius_max=1.2,
+        orbital_speed_min=-0.5,
+        orbital_speed_max=0.5
     )
 
