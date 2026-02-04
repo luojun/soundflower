@@ -810,4 +810,23 @@ sources (1 to 3). Add interactive UI controls to adjust in real-time:
 where negative values indicate counterclockwise rotation). The variabilities
 should apply continuously during simulation without requiring resets, and the
 UI should allow live adjustment of these parameters.
+~~
+
+~~
+Agent
+~
+Generate a prompt and append it to prompt_history for the following:
+(1) For the Pygame GUI part, please remove the current displayed text
+for position, distance, and intensity. (2) Please increase the font
+size for the remaining information text by 50%. (3) Please dim a
+sound source and/or remove the pulsating animation when a source
+is inactive.
+~
+Pygame GUI updates: (1) Remove the displayed text for position (Pos),
+distance (Dist), and intensity (Intensity) from the info panel.
+(2) Increase the font size of the remaining information text (agent
+name, variability info) by 50%. (3) For inactive sound sources
+(sources beyond the current number of active sources), dim their
+appearance and/or remove the pulsating wave animation so that only
+active sources are highlighted.
 ~

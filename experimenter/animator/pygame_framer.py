@@ -166,21 +166,28 @@ class PygameFramer:
         pygame.draw.circle(self.screen, self.colors['end_effector'], screen_pos, 10)
         pygame.draw.circle(self.screen, (255, 255, 255), screen_pos, 10, 2)
 
-    def _draw_sound_source(self, source_pos: np.ndarray, wave_phase: float, panel_index: int):
-        """Draw a sound source with animated waves for a specific panel."""
+    def _draw_sound_source(self, source_pos: np.ndarray, wave_phase: float, panel_index: int, active: bool = True):
+        """Draw a sound source with animated waves for a specific panel. Inactive sources are dimmed with no pulsation."""
         screen_pos = self._world_to_screen(source_pos, panel_index)
 
-        # Draw sound waves
-        num_waves = 3
-        for i in range(num_waves):
-            wave_radius = 15 + 10 * i + 5 * math.sin(wave_phase + i * math.pi / 2)
-            alpha = max(0, 255 - 80 * i - int(50 * abs(math.sin(wave_phase))))
-            color = tuple(min(255, c + alpha // 3) for c in self.colors['sound_wave'][:3])
-            pygame.draw.circle(self.screen, color, screen_pos, int(wave_radius), 2)
+        if active:
+            # Draw pulsating sound waves only for active sources
+            num_waves = 3
+            for i in range(num_waves):
+                wave_radius = 15 + 10 * i + 5 * math.sin(wave_phase + i * math.pi / 2)
+                alpha = max(0, 255 - 80 * i - int(50 * abs(math.sin(wave_phase))))
+                color = tuple(min(255, c + alpha // 3) for c in self.colors['sound_wave'][:3])
+                pygame.draw.circle(self.screen, color, screen_pos, int(wave_radius), 2)
+            source_color = self.colors['sound_source']
+            outline_color = (255, 255, 255)
+        else:
+            # Inactive: dimmed, no waves
+            source_color = tuple(c // 3 for c in self.colors['sound_source'])
+            outline_color = (100, 100, 100)
 
-        # Draw sound source
-        pygame.draw.circle(self.screen, self.colors['sound_source'], screen_pos, 8)
-        pygame.draw.circle(self.screen, (255, 255, 255), screen_pos, 8, 2)
+        # Draw sound source circle
+        pygame.draw.circle(self.screen, source_color, screen_pos, 8)
+        pygame.draw.circle(self.screen, outline_color, screen_pos, 8, 2)
 
     def _draw_text(self, text: str, pos: tuple, font=None, color=None):
         """Draw text on screen."""
@@ -202,44 +209,27 @@ class PygameFramer:
         y_offset = panel_offset_y + 10
         x_offset = panel_offset_x + 10
 
-        sound_intensity = render_data.get('sound_intensity', 0.0)
-        end_effector_pos = render_data.get('end_effector_pos', np.array([0, 0]))
-
-        # Calculate distance to nearest source
-        sound_source_positions = render_data.get('sound_source_positions', [])
-        if sound_source_positions:
-            distances = [np.linalg.norm(end_effector_pos - sp) for sp in sound_source_positions]
-            distance_to_source = min(distances)
-        else:
-            distance_to_source = float('inf')
+        # Use info_font (50% larger than small_font) for remaining information text
+        info_font = self.info_font
 
         # Agent name at top
         if agent_name:
-            self._draw_text(agent_name, (x_offset, y_offset), self.small_font, (200, 200, 255))
-            y_offset += 20
+            self._draw_text(agent_name, (x_offset, y_offset), info_font, (200, 200, 255))
+            y_offset += 27
 
-        self._draw_text(f"Intensity: {sound_intensity:.4f}", (x_offset, y_offset), self.small_font)
-        y_offset += 18
-        self._draw_text(f"Pos: ({end_effector_pos[0]:.3f}, {end_effector_pos[1]:.3f})",
-                       (x_offset, y_offset), self.small_font)
-        y_offset += 18
-        self._draw_text(f"Dist: {distance_to_source:.3f}",
-                       (x_offset, y_offset), self.small_font)
-
-        # Variability information
-        y_offset += 20
+        # Variability information only (position, distance, intensity removed)
         num_active = render_data.get('num_active_sources', 1)
-        self._draw_text(f"Active Sources: {num_active}", (x_offset, y_offset), self.small_font, (200, 255, 200))
-        y_offset += 18
+        self._draw_text(f"Active Sources: {num_active}", (x_offset, y_offset), info_font, (200, 255, 200))
+        y_offset += 27
         current_radius = render_data.get('current_orbit_radius', 1.0)
         radius_range = render_data.get('orbit_radius_range', (0.8, 1.2))
         self._draw_text(f"Radius: {current_radius:.2f} [{radius_range[0]:.2f}, {radius_range[1]:.2f}]",
-                       (x_offset, y_offset), self.small_font, (200, 255, 200))
-        y_offset += 18
+                       (x_offset, y_offset), info_font, (200, 255, 200))
+        y_offset += 27
         current_speed = render_data.get('current_orbital_speed', 0.0)
         speed_range = render_data.get('orbital_speed_range', (-0.5, 0.5))
         self._draw_text(f"Speed: {current_speed:.2f} [{speed_range[0]:.2f}, {speed_range[1]:.2f}]",
-                       (x_offset, y_offset), self.small_font, (200, 255, 200))
+                       (x_offset, y_offset), info_font, (200, 255, 200))
 
     def render_frame(self, render_data_list, agent_names=None) -> bool:
         """
@@ -299,19 +289,25 @@ class PygameFramer:
                 end_effector_pos = render_data['end_effector_pos']
                 self._draw_arm(joint_positions, end_effector_pos, panel_index, arm_color)
 
-                # Draw sound sources for this panel
+                # Draw sound sources for this panel (active = first num_active_sources, rest dimmed)
                 sound_source_positions = render_data.get('sound_source_positions', [])
-                for source_pos in sound_source_positions:
-                    self._draw_sound_source(source_pos, self.wave_phase, panel_index)
+                num_active = render_data.get('num_active_sources', 1)
+                for i, source_pos in enumerate(sound_source_positions):
+                    self._draw_sound_source(
+                        source_pos, self.wave_phase, panel_index,
+                        active=(i < num_active)
+                    )
 
                 # Draw info panel for this panel
                 self._draw_info_panel(render_data, panel_index, agent_name)
             else:
                 # Draw agent name even if no data is available
                 self._draw_info_panel({
-                    'sound_intensity': 0.0,
-                    'end_effector_pos': np.array([0, 0]),
-                    'sound_source_positions': []
+                    'num_active_sources': 1,
+                    'current_orbit_radius': 1.0,
+                    'orbit_radius_range': (0.8, 1.2),
+                    'current_orbital_speed': 0.0,
+                    'orbital_speed_range': (-0.5, 0.5)
                 }, panel_index, agent_name)
 
         # Draw global controls info (only once, bottom right)
@@ -330,9 +326,10 @@ class PygameFramer:
         pygame.init()
         self.screen = pygame.display.set_mode(self.window_size)
         pygame.display.set_caption("Sound Flower - Real-time Animation")
-        # Font
+        # Font (small_font 18; info_font 50% larger = 27 for remaining info text)
         self.font = pygame.font.Font(None, 24)
         self.small_font = pygame.font.Font(None, 18)
+        self.info_font = pygame.font.Font(None, 27)
 
     def finish(self):
         """Close the visualizer."""
