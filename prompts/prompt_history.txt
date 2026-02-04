@@ -830,3 +830,15 @@ name, variability info) by 50%. (3) For inactive sound sources
 appearance and/or remove the pulsating wave animation so that only
 active sources are highlighted.
 ~
+Update the control of sound source variability as follows:
+(1) Use 'r' and 'v' to *decrease the min* of range of radius and velocity. Radius
+min stops at zero but velocity could be unbounded in the negative range.
+(2) Use Shift+'r' (i.e. 'R') and Shift+'v' (i.e. 'V') to *increase the min* of
+radius and velocity variation.
+(3) Use Ctrl+'r' and Ctrl+'v' to *decrease the max* of the range for
+radius and velocity variation. Max should be no smaller than min in both cases.
+(4) Use Ctrl+Shift+'r' (i.e. Ctrl+'R') and Ctrl+Shift+'v' (i.e. Ctrl+'V') to
+*increase the max" of radius and velocity variation.
+Update the printed out instructions accordingly.
+~
+Apply the same two updates above to demo_suite.py.

@@ -70,7 +70,7 @@ class PhysicsEngine:
 
     def set_orbit_radius_range(self, min_radius: float, max_radius: float):
         """Set orbit radius variability range."""
-        self.config.orbit_radius_min = max(0.1, min_radius)
+        self.config.orbit_radius_min = max(0.0, min_radius)
         self.config.orbit_radius_max = max(self.config.orbit_radius_min, max_radius)
         # Clamp current radius to new range
         self.current_orbit_radius = np.clip(

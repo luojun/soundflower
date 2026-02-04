@@ -28,15 +28,17 @@
 
 **First**
 
-- [ ] Variation in ortibal velocity of sound source.
-- [ ] Variation in orbit radius (slow drift).
-- [ ] Variation in number of active sources (1 to 3).
+- [x] Variation in ortibal velocity of sound source.
+- [x] Variation in orbit radius (slow drift).
+- [x] Variation in number of active sources (1 to 3).
+- [ ] Automated random process of variation.
 
 **Second**
 
 - [ ] Variation in joint friction (slow drift).
 - [ ] Variation in link lengths and mass (slow drift).
 - [ ] Variation in range of joint rotation.
+- [ ] Automated random process of variation.
 
 **Future consideration**
 
@@ -54,13 +56,13 @@
 - [ ] “Conductor” GUI to control variability in real time.
 - [ ] Improve UI, animation, and plotting for easiness, visual impact and clarity.
 - [ ] “Conductor” GUI to control variability in real time.
-- [ ] “Conductor” keyboard UI for real-time variability control.
+- [x] “Conductor” keyboard UI for real-time variability control.
 
 
 ##### Experiment and Evaluation
 
-- [ ] Run the agents continually.
-- [ ] Evaluate in terms of life-time cumulative energy harvest.
+- [x] Run the agents continually.
+- [x] Evaluate in terms of life-time cumulative energy harvest.
 - [ ] Evaluate in terms of average latest N seconds of energy harvest.
 
 ##### Research Topics
