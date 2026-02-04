@@ -22,6 +22,7 @@ CMD_PAUSE = "pause"
 CMD_RESUME = "resume"
 CMD_FORWARD = "forward"
 CMD_QUIT = "quit"
+CMD_VARIABILITY = "variability"  # payload: {'op': 'radius_min_decrease' | 'radius_min_increase' | ...}
 
 
 def simulation_worker(config, agent_class, agent_name, link_name, command_queue, data_queue):
@@ -90,6 +91,38 @@ def simulation_worker(config, agent_class, agent_name, link_name, command_queue,
                     elif cmd['type'] == CMD_QUIT:
                         running = False
                         break
+                    elif cmd['type'] == CMD_VARIABILITY:
+                        op = cmd.get('op')
+                        pe = environment.physics_engine
+                        c = pe.config
+                        step = 0.05
+                        if op == 'radius_min_decrease':
+                            new_min = max(0.0, c.orbit_radius_min - step)
+                            pe.set_orbit_radius_range(new_min, c.orbit_radius_max)
+                        elif op == 'radius_min_increase':
+                            new_min = min(c.orbit_radius_max, c.orbit_radius_min + step)
+                            pe.set_orbit_radius_range(new_min, c.orbit_radius_max)
+                        elif op == 'radius_max_decrease':
+                            new_max = max(c.orbit_radius_min, c.orbit_radius_max - step)
+                            pe.set_orbit_radius_range(c.orbit_radius_min, new_max)
+                        elif op == 'radius_max_increase':
+                            new_max = c.orbit_radius_max + step
+                            pe.set_orbit_radius_range(c.orbit_radius_min, new_max)
+                        elif op == 'speed_min_decrease':
+                            new_min = c.orbital_speed_min - step
+                            pe.set_orbital_speed_range(new_min, c.orbital_speed_max)
+                        elif op == 'speed_min_increase':
+                            new_min = min(c.orbital_speed_max, c.orbital_speed_min + step)
+                            pe.set_orbital_speed_range(new_min, c.orbital_speed_max)
+                        elif op == 'speed_max_decrease':
+                            new_max = max(c.orbital_speed_min, c.orbital_speed_max - step)
+                            pe.set_orbital_speed_range(c.orbital_speed_min, new_max)
+                        elif op == 'speed_max_increase':
+                            new_max = c.orbital_speed_max + step
+                            pe.set_orbital_speed_range(c.orbital_speed_min, new_max)
+                        elif op == 'cycle_sources':
+                            n = (c.num_active_sources % 3) + 1
+                            pe.set_num_active_sources(n)
             except:
                 pass  # No commands available
 
@@ -301,6 +334,32 @@ class MultiAgentDemo:
                     self.forward(10000)
                 elif event.key in (pygame.K_ESCAPE, pygame.K_q):
                     should_quit = True
+                # Variability controls (broadcast to all workers)
+                elif event.key == pygame.K_s:
+                    for q in self.command_queues:
+                        q.put({'type': CMD_VARIABILITY, 'op': 'cycle_sources'})
+                elif event.key == pygame.K_r:
+                    if (event.mod & pygame.KMOD_CTRL) and (event.mod & pygame.KMOD_SHIFT):
+                        op = 'radius_max_increase'
+                    elif event.mod & pygame.KMOD_CTRL:
+                        op = 'radius_max_decrease'
+                    elif event.mod & pygame.KMOD_SHIFT:
+                        op = 'radius_min_increase'
+                    else:
+                        op = 'radius_min_decrease'
+                    for q in self.command_queues:
+                        q.put({'type': CMD_VARIABILITY, 'op': op})
+                elif event.key == pygame.K_v:
+                    if (event.mod & pygame.KMOD_CTRL) and (event.mod & pygame.KMOD_SHIFT):
+                        op = 'speed_max_increase'
+                    elif event.mod & pygame.KMOD_CTRL:
+                        op = 'speed_max_decrease'
+                    elif event.mod & pygame.KMOD_SHIFT:
+                        op = 'speed_min_increase'
+                    else:
+                        op = 'speed_min_decrease'
+                    for q in self.command_queues:
+                        q.put({'type': CMD_VARIABILITY, 'op': op})
 
         return should_quit, paused
 
@@ -348,11 +407,14 @@ class MultiAgentDemo:
             print("\nControls (applies to all agents):")
             print("  SPACE: Pause/Resume")
             print("  RETURN: Pause and step forward 1 step")
-            print("  1: Pause and step forward 10 steps")
-            print("  2: Pause and step forward 100 steps")
-            print("  3: Pause and step forward 1000 steps")
-            print("  4: Pause and step forward 10000 steps")
+            print("  1-4: Pause and step forward 10/100/1000/10000 steps")
             print("  ESC or Q: Quit")
+            print("\nVariability Controls (apply to all agents):")
+            print("  S: Cycle number of active sources (1 -> 2 -> 3 -> 1)")
+            print("  r/v: Decrease min of radius/velocity range (radius min stops at 0)")
+            print("  R/V (Shift+r/v): Increase min of radius/velocity range")
+            print("  Ctrl+r/v: Decrease max of radius/velocity range")
+            print("  Ctrl+R/V (Ctrl+Shift+r/v): Increase max of radius/velocity range")
             print("=" * 60)
 
         self.start()

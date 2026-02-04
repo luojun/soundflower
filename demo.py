@@ -30,8 +30,10 @@ def main(headless: bool = False):
         print("  ESC or Q: Quit")
         print("\nVariability Controls:")
         print("  S: Cycle number of active sources (1 -> 2 -> 3 -> 1)")
-        print("  R: Increase orbit radius max, Shift+R: Decrease orbit radius min")
-        print("  V: Increase orbital speed max, Shift+V: Decrease orbital speed min (more negative)")
+        print("  r/v: Decrease min of radius/velocity range (radius min stops at 0)")
+        print("  R/V (Shift+r/v): Increase min of radius/velocity range")
+        print("  Ctrl+r/v: Decrease max of radius/velocity range")
+        print("  Ctrl+R/V (Ctrl+Shift+r/v): Increase max of radius/velocity range")
 
     print("=" * 60)
 
@@ -95,37 +97,53 @@ def main(headless: bool = False):
                             environment.physics_engine.set_num_active_sources(new_num)
                             print(f"Active sources: {new_num}")
                         elif event.key == pygame.K_r:
-                            # Increase orbit radius max
-                            config = environment.physics_engine.config
-                            new_max = config.orbit_radius_max + 0.1
-                            environment.physics_engine.set_orbit_radius_range(
-                                config.orbit_radius_min, new_max
-                            )
-                            print(f"Orbit radius range: [{config.orbit_radius_min:.2f}, {new_max:.2f}]")
-                        elif event.key == pygame.K_r and event.mod & pygame.KMOD_SHIFT:
-                            # Decrease orbit radius min
-                            config = environment.physics_engine.config
-                            new_min = max(0.1, config.orbit_radius_min - 0.1)
-                            environment.physics_engine.set_orbit_radius_range(
-                                new_min, config.orbit_radius_max
-                            )
-                            print(f"Orbit radius range: [{new_min:.2f}, {config.orbit_radius_max:.2f}]")
+                            pe = environment.physics_engine
+                            c = pe.config
+                            step = 0.05
+                            if (event.mod & pygame.KMOD_CTRL) and (event.mod & pygame.KMOD_SHIFT):
+                                # Ctrl+Shift+r (Ctrl+R): increase max of radius
+                                new_max = c.orbit_radius_max + step
+                                pe.set_orbit_radius_range(c.orbit_radius_min, new_max)
+                                print(f"Orbit radius range: [{c.orbit_radius_min:.2f}, {new_max:.2f}]")
+                            elif event.mod & pygame.KMOD_CTRL:
+                                # Ctrl+r: decrease max of radius (max >= min)
+                                new_max = max(c.orbit_radius_min, c.orbit_radius_max - step)
+                                pe.set_orbit_radius_range(c.orbit_radius_min, new_max)
+                                print(f"Orbit radius range: [{c.orbit_radius_min:.2f}, {new_max:.2f}]")
+                            elif event.mod & pygame.KMOD_SHIFT:
+                                # R (Shift+r): increase min of radius (min <= max)
+                                new_min = min(c.orbit_radius_max, c.orbit_radius_min + step)
+                                pe.set_orbit_radius_range(new_min, c.orbit_radius_max)
+                                print(f"Orbit radius range: [{new_min:.2f}, {c.orbit_radius_max:.2f}]")
+                            else:
+                                # r: decrease min of radius (min stops at 0)
+                                new_min = max(0.0, c.orbit_radius_min - step)
+                                pe.set_orbit_radius_range(new_min, c.orbit_radius_max)
+                                print(f"Orbit radius range: [{new_min:.2f}, {c.orbit_radius_max:.2f}]")
                         elif event.key == pygame.K_v:
-                            # Increase orbital speed max
-                            config = environment.physics_engine.config
-                            new_max = config.orbital_speed_max + 0.1
-                            environment.physics_engine.set_orbital_speed_range(
-                                config.orbital_speed_min, new_max
-                            )
-                            print(f"Orbital speed range: [{config.orbital_speed_min:.2f}, {new_max:.2f}] rad/s")
-                        elif event.key == pygame.K_v and event.mod & pygame.KMOD_SHIFT:
-                            # Decrease orbital speed min (more negative = faster counterclockwise)
-                            config = environment.physics_engine.config
-                            new_min = config.orbital_speed_min - 0.1
-                            environment.physics_engine.set_orbital_speed_range(
-                                new_min, config.orbital_speed_max
-                            )
-                            print(f"Orbital speed range: [{new_min:.2f}, {config.orbital_speed_max:.2f}] rad/s")
+                            pe = environment.physics_engine
+                            c = pe.config
+                            step = 0.05
+                            if (event.mod & pygame.KMOD_CTRL) and (event.mod & pygame.KMOD_SHIFT):
+                                # Ctrl+Shift+v (Ctrl+V): increase max of velocity
+                                new_max = c.orbital_speed_max + step
+                                pe.set_orbital_speed_range(c.orbital_speed_min, new_max)
+                                print(f"Orbital speed range: [{c.orbital_speed_min:.2f}, {new_max:.2f}] rad/s")
+                            elif event.mod & pygame.KMOD_CTRL:
+                                # Ctrl+v: decrease max of velocity (max >= min)
+                                new_max = max(c.orbital_speed_min, c.orbital_speed_max - step)
+                                pe.set_orbital_speed_range(c.orbital_speed_min, new_max)
+                                print(f"Orbital speed range: [{c.orbital_speed_min:.2f}, {new_max:.2f}] rad/s")
+                            elif event.mod & pygame.KMOD_SHIFT:
+                                # V (Shift+v): increase min of velocity (min <= max)
+                                new_min = min(c.orbital_speed_max, c.orbital_speed_min + step)
+                                pe.set_orbital_speed_range(new_min, c.orbital_speed_max)
+                                print(f"Orbital speed range: [{new_min:.2f}, {c.orbital_speed_max:.2f}] rad/s")
+                            else:
+                                # v: decrease min of velocity (unbounded negative)
+                                new_min = c.orbital_speed_min - step
+                                pe.set_orbital_speed_range(new_min, c.orbital_speed_max)
+                                print(f"Orbital speed range: [{new_min:.2f}, {c.orbital_speed_max:.2f}] rad/s")
 
             if should_quit:
                 break
