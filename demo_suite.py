@@ -238,7 +238,7 @@ class MultiAgentDemo:
                 config = metadata['config']  # Use config from metadata directly
                 all_configs.append(config)  # Pass full config objects, Animator will convert them
 
-            self.animator = Animator(all_configs, panels_per_row=3)
+            self.animator = Animator(all_configs, panels_per_row=4)
 
 
     def start(self):

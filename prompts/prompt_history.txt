@@ -865,3 +865,9 @@ and plotter (color/name for ContinualDeepRLAgent), and tests/test_agents.py
 (test that builds agent, select_action returns shape (num_joints,) and finite,
 observe runs; skip if torch not installed).
 ~~
+
+~~
+Agent
+~
+Use two rows for Pygame animation, with the first row showing two-link arms
+and the second row showing three-link arms.
