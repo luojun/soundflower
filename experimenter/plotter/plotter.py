@@ -187,6 +187,9 @@ class MatplotlibPlotter(Plotter):
             'PointingAgent': '#FF6464',      # Red
             'ApproachingAgent': '#64FF64',    # Green
             'TrackingAgent': '#6464FF',       # Blue
+            'LinearReactiveAgent': '#FF6464',
+            'ContinualLinearRLAgent': '#64FF64',
+            'ContinualDeepRLAgent': '#FFC864',  # Amber
         }
         # Base styles for link configurations
         self._base_styles = {

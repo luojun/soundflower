@@ -6,6 +6,7 @@ from .approaching_agent import ApproachingAgent
 from .tracking_agent import TrackingAgent
 from .linear_reactive_agent import LinearReactiveAgent
 from .continual_linear_rl_agent import ContinualLinearRLAgent
+from .continual_deep_rl_agent import ContinualDeepRLAgent
 
 __all__ = [
     'BaseAgent',
@@ -14,4 +15,5 @@ __all__ = [
     'TrackingAgent',
     'LinearReactiveAgent',
     'ContinualLinearRLAgent',
+    'ContinualDeepRLAgent',
 ]

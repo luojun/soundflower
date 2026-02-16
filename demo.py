@@ -47,6 +47,7 @@ def main(headless: bool = False):
     config.__post_init__()  # Ensure configuration is validated
     environment = Environment(config)
     agent = ContinualLinearRLAgent()
+    # Optional: agent = ContinualDeepRLAgent() after: from agents.continual_deep_rl_agent import ContinualDeepRLAgent
     # Identify logger and plotter by agent type
     agent_name = agent.__class__.__name__
     logger = Logger(agent_name=agent_name)

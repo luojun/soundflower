@@ -842,3 +842,26 @@ radius and velocity variation. Max should be no smaller than min in both cases.
 Update the printed out instructions accordingly.
 ~
 Apply the same two updates above to demo_suite.py.
+~~
+
+~~
+Agent (Planned)
+~
+Implement steps 1 to 5 of the deep continual RL agent plan (vanilla first):
+(1) Add PyTorch to requirements.txt.
+(2) Reuse feature construction from LinearReactiveAgent (_build_features: angles,
+angular_velocities, angular_accelerations, last_torques, intensity, optional
+intensity_delta).
+(3) Vanilla continual deep RL agent in agents/continual_deep_rl_agent.py: small
+MLP actor (Gaussian policy μ, σ) and critic V(s), Adam optimizer, same interface
+as continual linear agent.
+(4) One-step TD and policy update (continual, no replay): store previous feature
+s and action a; on next step use s', r; δ = r + γV(s') - V(s); value loss (δ)²;
+policy loss -δ*log_prob(a|s) - β_entropy*entropy; backward and optimizer step
+for value and policy.
+(5) Wire into agents/__init__.py, demo_suite.py (add ContinualDeepRLAgent to
+agent_configs with distinct color, sensorimotor mode), experimenter animator
+and plotter (color/name for ContinualDeepRLAgent), and tests/test_agents.py
+(test that builds agent, select_action returns shape (num_joints,) and finite,
+observe runs; skip if torch not installed).
+~~

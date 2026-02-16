@@ -10,6 +10,7 @@ from environment import Environment
 from agents.tracking_agent import TrackingAgent
 from agents.linear_reactive_agent import LinearReactiveAgent
 from agents.continual_linear_rl_agent import ContinualLinearRLAgent
+from agents.continual_deep_rl_agent import ContinualDeepRLAgent
 from experimenter import create_default_config, Logger
 from experimenter.animator import Animator
 from experimenter.plotter import create_plotter
@@ -195,6 +196,7 @@ class MultiAgentDemo:
             ("TrackingAgent", TrackingAgent, (100, 100, 255), "full"),  # Blue
             ("LinearReactiveAgent", LinearReactiveAgent, (255, 100, 100), "sensorimotor"),  # Red
             ("ContinualLinearRLAgent", ContinualLinearRLAgent, (100, 255, 100), "sensorimotor"),  # Green
+            ("ContinualDeepRLAgent", ContinualDeepRLAgent, (255, 200, 100), "sensorimotor"),  # Amber
         ]
         link_configs = [
             (config_2link, "2-link"),
@@ -389,15 +391,17 @@ class MultiAgentDemo:
         print("=" * 60)
         print("Sound Flower - Multi-Agent Comparison Demo")
         print("=" * 60)
-        print("\nRunning six instances simultaneously:")
+        print("\nRunning eight instances simultaneously:")
         print("  Row 1 (2-link arms):")
         print("    - TrackingAgent (Blue, Full): Points and minimizes distance")
         print("    - LinearReactiveAgent (Red, Sensorimotor): Minimal linear reactor")
         print("    - ContinualLinearRLAgent (Green, Sensorimotor): Online TD(λ) learner")
+        print("    - ContinualDeepRLAgent (Amber, Sensorimotor): Vanilla deep continual RL")
         print("  Row 2 (3-link arms):")
         print("    - TrackingAgent (Blue, Full): Points and minimizes distance")
         print("    - LinearReactiveAgent (Red, Sensorimotor): Minimal linear reactor")
         print("    - ContinualLinearRLAgent (Green, Sensorimotor): Online TD(λ) learner")
+        print("    - ContinualDeepRLAgent (Amber, Sensorimotor): Vanilla deep continual RL")
         print("=" * 60)
         print("\nTensorBoard logging enabled.")
         print("To view metrics, run: tensorboard --logdir=logs")

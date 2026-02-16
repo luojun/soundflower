@@ -50,6 +50,9 @@ class PygameFramer:
             'PointingAgent': (255, 100, 100),    # Red
             'ApproachingAgent': (100, 255, 100), # Green
             'TrackingAgent': (100, 100, 255),    # Blue
+            'LinearReactiveAgent': (255, 100, 100),
+            'ContinualLinearRLAgent': (100, 255, 100),
+            'ContinualDeepRLAgent': (255, 200, 100),  # Amber
         }
 
         # Colors

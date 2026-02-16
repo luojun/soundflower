@@ -1,6 +1,7 @@
 """Agent smoke tests for action shapes and finite outputs."""
 
 import numpy as np
+import pytest
 
 from agents.approaching_agent import ApproachingAgent
 from agents.continual_linear_rl_agent import ContinualLinearRLAgent
@@ -9,6 +10,12 @@ from agents.pointing_agent import PointingAgent
 from agents.tracking_agent import TrackingAgent
 from environment import Environment
 from experimenter.config import create_default_config
+
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
 
 
 def _make_env(num_links: int, observation_mode: str) -> Environment:
@@ -61,6 +68,22 @@ def test_linear_reactive_agent_action_shape():
 def test_continual_linear_rl_agent_step():
     env = _make_env(num_links=2, observation_mode="sensorimotor")
     agent = ContinualLinearRLAgent()
+
+    state = env.get_state()
+    action = _assert_action(agent, state.observation, num_links=2)
+    env.apply_action(action)
+    env.step()
+
+    next_state = env.get_state()
+    agent.observe(next_state.reward, next_state.observation)
+    _assert_action(agent, next_state.observation, num_links=2)
+
+
+@pytest.mark.skipif(not TORCH_AVAILABLE, reason="PyTorch not installed")
+def test_continual_deep_rl_agent_step():
+    from agents.continual_deep_rl_agent import ContinualDeepRLAgent
+    env = _make_env(num_links=2, observation_mode="sensorimotor")
+    agent = ContinualDeepRLAgent()
 
     state = env.get_state()
     action = _assert_action(agent, state.observation, num_links=2)
