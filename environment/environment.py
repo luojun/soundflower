@@ -93,7 +93,7 @@ class Environment:
             info=None
         )
 
-    def apply_action(self, action: np.ndarray):
+    def apply(self, action: np.ndarray):
         """
         Apply action to the environment.
 

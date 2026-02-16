@@ -34,8 +34,8 @@ def _make_env(num_links: int, observation_mode: str) -> Environment:
     return Environment(config)
 
 
-def _assert_action(agent, observation, num_links: int) -> np.ndarray:
-    action = agent.select_action(observation)
+def _assert_action(agent, observation, num_links: int, reward: float | None = None) -> np.ndarray:
+    action = agent.decide(observation, reward)
     assert action.shape == (num_links,)
     assert np.all(np.isfinite(action))
     return action
@@ -71,12 +71,11 @@ def test_continual_linear_rl_agent_step():
 
     state = env.get_state()
     action = _assert_action(agent, state.observation, num_links=2)
-    env.apply_action(action)
+    env.apply(action)
     env.step()
 
     next_state = env.get_state()
-    agent.observe(next_state.reward, next_state.observation)
-    _assert_action(agent, next_state.observation, num_links=2)
+    _assert_action(agent, next_state.observation, num_links=2, reward=next_state.reward)
 
 
 @pytest.mark.skipif(not TORCH_AVAILABLE, reason="PyTorch not installed")
@@ -87,9 +86,8 @@ def test_continual_deep_rl_agent_step():
 
     state = env.get_state()
     action = _assert_action(agent, state.observation, num_links=2)
-    env.apply_action(action)
+    env.apply(action)
     env.step()
 
     next_state = env.get_state()
-    agent.observe(next_state.reward, next_state.observation)
-    _assert_action(agent, next_state.observation, num_links=2)
+    _assert_action(agent, next_state.observation, num_links=2, reward=next_state.reward)

@@ -35,7 +35,7 @@ class SoundFlower:
         Args:
             config: Configuration object
             environment: Environment instance
-            agent: Agent with async select_action method
+            agent: Agent with decide(observation, reward) method
             logger: Logger with async logging
             animator: Animator with async animation
             plotter: Plotter for real-time metrics visualization
@@ -91,10 +91,8 @@ class SoundFlower:
 
             if self.time_since_last_aciton >= self.control_period:
                 self.cumulative_reward += environment_state.reward
-                if hasattr(self.agent, "observe"):
-                    self.agent.observe(environment_state.reward, environment_state.observation)
-                action = self.agent.select_action(environment_state.observation)
-                self.environment.apply_action(action)
+                action = self.agent.decide(environment_state.observation, environment_state.reward)
+                self.environment.apply(action)
 
                 self.time_since_last_aciton = 0.0
 

@@ -102,7 +102,7 @@ class LinearReactiveAgent(BaseAgent):
         x = self._build_features(observation)
         self._z = self._A @ self._z + self._B @ x
 
-    def select_action(self, observation: Observation) -> np.ndarray:
+    def decide(self, observation: Observation, reward: float | None = None) -> np.ndarray:
         if not self._initialized:
             self._initialize(observation)
         self._update_state(observation)

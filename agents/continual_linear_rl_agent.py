@@ -62,7 +62,6 @@ class ContinualLinearRLAgent(LinearReactiveAgent):
         self.max_value_norm = max_value_norm
         self.max_trace_norm = max_trace_norm
 
-        self._pending_reward = None
         self._prev_z = None
         self._trace = None
         self._value_weights = None
@@ -85,16 +84,12 @@ class ContinualLinearRLAgent(LinearReactiveAgent):
         self._policy_beta = np.full_like(self._W, beta_init)
         self._policy_h = np.zeros_like(self._W)
         self._prev_z = None
-        self._pending_reward = None
         self._delta_rms = 0.0
 
     def _advance_state(self, observation: Observation) -> np.ndarray:
         x = self._build_features(observation)
         self._z = self._A @ self._z + self._B @ x
         return self._z
-
-    def observe(self, reward: float, observation: Observation) -> None:
-        self._pending_reward = reward
 
     def _update_idbd_vector(self, delta: float, z_prev: np.ndarray, trace: np.ndarray) -> None:
         beta_min = np.log(self.min_step_size)
@@ -163,17 +158,16 @@ class ContinualLinearRLAgent(LinearReactiveAgent):
         if not np.all(np.isfinite(self._W)):
             raise RuntimeError(f"Non-finite policy weights after update: {self._W}")
 
-    def select_action(self, observation: Observation) -> np.ndarray:
+    def decide(self, observation: Observation, reward: float | None = None) -> np.ndarray:
         if not self._initialized:
             self._initialize(observation)
 
         z_current = self._advance_state(observation)
         if not np.all(np.isfinite(z_current)):
             raise RuntimeError(f"Non-finite memory state z: {z_current}")
-        if self._pending_reward is not None and self._prev_z is not None:
-            self._apply_td_update(self._pending_reward, self._prev_z, z_current)
+        if reward is not None and self._prev_z is not None:
+            self._apply_td_update(reward, self._prev_z, z_current)
         self._prev_z = z_current.copy()
-        self._pending_reward = None
         torques = self._W @ z_current
         if not np.all(np.isfinite(torques)):
             raise RuntimeError(f"Non-finite torques produced: {torques}")

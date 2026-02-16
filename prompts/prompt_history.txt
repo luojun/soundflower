@@ -871,3 +871,37 @@ Agent
 ~
 Use two rows for Pygame animation, with the first row showing two-link arms
 and the second row showing three-link arms.
+~
+Refactor the code base such that the base_agent only expose a "decide" method
+which receives both observation & reward and returns the action, and the
+environment only "apply" the action. Make sure that no "observe" method is
+exposed as part of the agent interface. Also, refactor the code so that
+learning happens inside "decide". Please analyze the code base along these
+lines and append below a detailed plan, before go ahead to implement the
+refactor.
+~
+Succinct plan (implement refactor only in code; exclude this prompts file
+from replacements):
+(1) Base: agents/base_agent.py — replace select_action(observation) and
+observe(reward, observation) with single abstract decide(observation, reward).
+reward may be None on first call.
+(2) Environment: environment/environment.py — rename apply_action(action)
+to apply(action).
+(3) Runner: soundflower/soundflower.py — in step(), call
+action = agent.decide(obs, reward) then environment.apply(action);
+remove observe/select_action/apply_action calls.
+(4) Agents: pointing, approaching, tracking, linear_reactive — implement
+decide(obs, reward=None), ignore reward, same behavior as current select_action.
+(5) Continual linear: continual_linear_rl_agent.py — remove observe; in
+decide(obs, reward): if reward is not None and _prev_z set, advance state
+to z_current, run _apply_td_update(reward, _prev_z, z_current),
+set _prev_z = z_current; else just advance and set _prev_z;
+return W @ current_z.
+(6) Continual deep: continual_deep_rl_agent.py — remove observe;
+in decide(obs, reward): if _prev_feats and reward is not None,
+run value/policy update (current observe body), then clear prev;
+then compute and return action for obs, store prev feats/action.
+(7) Tests: tests/test_agents.py — use agent.decide(obs, reward) and
+env.apply(action); pass reward into decide for continual-agent step tests.
+~~
+

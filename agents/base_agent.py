@@ -12,24 +12,15 @@ class BaseAgent(ABC):
         return
 
     @abstractmethod
-    def select_action(self, observation: Observation):
+    def decide(self, observation: Observation, reward: float | None):
         """
-        Select action based on observation.
+        Decide action given current observation and reward from the previous action.
 
         Args:
-            observation: Current observation
+            observation: Current observation (state after the last applied action).
+            reward: Reward received for the previous action; None on first call.
 
         Returns:
-            action: Torques to apply at each joint
+            action: Torques to apply at each joint.
         """
         raise NotImplementedError
-
-    def observe(self, reward: float, observation: Observation) -> None:
-        """
-        Optional learning hook for agents that update from reward/observation.
-
-        Args:
-            reward: Reward received for the previous action.
-            observation: Current observation after transition.
-        """
-        return

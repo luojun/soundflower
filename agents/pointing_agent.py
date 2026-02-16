@@ -25,15 +25,16 @@ class PointingAgent(PDControlMixin, BaseAgent):
         super().__init__(kp=kp, kd=kd)
         self.target_angle = 0.0
 
-    def select_action(self, observation: Observation) -> np.ndarray:
+    def decide(self, observation: Observation, reward: float | None = None) -> np.ndarray:
         """
-        Select action to point microphone toward sound source.
+        Decide action to point microphone toward sound source.
 
         Optimizes orientation toward sound source while ignoring distance to target.
         Distance may change naturally but is not subject to IK optimization pressure.
 
         Args:
             observation: Current observation
+            reward: Reward from previous action (ignored)
 
         Returns:
             action: Torques to apply at each joint

@@ -117,7 +117,7 @@ class ContinualDeepRLAgent(BaseAgent):
         self._critic: _Critic | None = None
         self._optimizer_policy: torch.optim.Optimizer | None = None
         self._optimizer_value: torch.optim.Optimizer | None = None
-        # Stored from last select_action for use in observe
+        # Stored from last decide for use in next decide (learning step)
         self._prev_feats: torch.Tensor | None = None
         self._prev_action: torch.Tensor | None = None
 
@@ -144,9 +144,33 @@ class ContinualDeepRLAgent(BaseAgent):
         )
         return feats
 
-    def select_action(self, observation: Observation) -> np.ndarray:
+    def decide(self, observation: Observation, reward: float | None = None) -> np.ndarray:
         if not self._initialized:
             self._initialize(observation)
+        # Learning: if we have a previous transition (s, a) and reward, run value/policy update
+        if self._prev_feats is not None and reward is not None:
+            s_prime, self._prev_intensity = _build_features_from_obs(
+                observation, self.use_intensity_delta, self._prev_intensity
+            )
+            s_prime_t = torch.as_tensor(s_prime, dtype=torch.float32).unsqueeze(0)
+            V_s = self._critic(self._prev_feats).squeeze(0)
+            V_s_prime = self._critic(s_prime_t).squeeze(0)
+            delta_t = reward + self.gamma * V_s_prime - V_s
+            value_loss = delta_t.pow(2)
+            self._optimizer_value.zero_grad()
+            value_loss.backward()
+            self._optimizer_value.step()
+            mu, std = self._actor(self._prev_feats)
+            dist = torch.distributions.Normal(mu.squeeze(0), std.squeeze(0))
+            log_prob = dist.log_prob(self._prev_action).sum()
+            entropy = dist.entropy().sum()
+            policy_loss = -delta_t.detach() * log_prob - self.beta_entropy * entropy
+            self._optimizer_policy.zero_grad()
+            policy_loss.backward()
+            self._optimizer_policy.step()
+            self._prev_feats = None
+            self._prev_action = None
+        # Choose action for current observation
         x, self._prev_intensity = _build_features_from_obs(
             observation, self.use_intensity_delta, self._prev_intensity
         )
@@ -160,29 +184,3 @@ class ContinualDeepRLAgent(BaseAgent):
         self._prev_feats = x_t.detach()
         self._prev_action = action_t.squeeze(0).detach()
         return action_np
-
-    def observe(self, reward: float, observation: Observation) -> None:
-        if not self._initialized or self._prev_feats is None:
-            return
-        s_prime, self._prev_intensity = _build_features_from_obs(
-            observation, self.use_intensity_delta, self._prev_intensity
-        )
-        s_prime_t = torch.as_tensor(s_prime, dtype=torch.float32).unsqueeze(0)
-        V_s = self._critic(self._prev_feats).squeeze(0)
-        V_s_prime = self._critic(s_prime_t).squeeze(0)
-        delta_t = reward + self.gamma * V_s_prime - V_s
-        value_loss = delta_t.pow(2)
-        self._optimizer_value.zero_grad()
-        value_loss.backward()
-        self._optimizer_value.step()
-        # Policy loss: recompute log_prob and entropy so gradients flow through actor
-        mu, std = self._actor(self._prev_feats)
-        dist = torch.distributions.Normal(mu.squeeze(0), std.squeeze(0))
-        log_prob = dist.log_prob(self._prev_action).sum()
-        entropy = dist.entropy().sum()
-        policy_loss = -delta_t.detach() * log_prob - self.beta_entropy * entropy
-        self._optimizer_policy.zero_grad()
-        policy_loss.backward()
-        self._optimizer_policy.step()
-        self._prev_feats = None
-        self._prev_action = None
