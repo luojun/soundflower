@@ -1,5 +1,24 @@
 ### TODO
 
+##### Environment Basics
+
+- [ ] Clarify relation between reward, energy delta, cumulative reward, and cumulative energy.
+- [ ] Use 1-link arm (Rotato!) to validate and illustate the claified relation.
+- [ ] Validate the clarified relation with 2-link and 3-link arms.
+- [ ] Consider sound sources moving in straight lines.
+- [ ] Consider sound sources doing human-like random walk.
+
+##### Sensorimotor Abstraction
+
+- [ ] Clarify sensorimotor abstraction (representation learning) w.r.t. 1-, 2-, 3-link crossed with rotating, straightining, and random-walking sound sources.
+
+##### Experiment and Evaluation
+
+- [x] Run the agents continually.
+- [x] Evaluate in terms of life-time cumulative energy harvest.
+- [ ] Introduce experiments to illustrate clarified situation around sensorimotor abstraction.
+- [ ] Evaluate in terms of average latest N seconds of energy harvest.
+
 ##### Simulation Performance
 
 - [x] Faster plotting.
@@ -58,12 +77,6 @@
 - [ ] “Conductor” GUI to control variability in real time.
 - [x] “Conductor” keyboard UI for real-time variability control.
 
-
-##### Experiment and Evaluation
-
-- [x] Run the agents continually.
-- [x] Evaluate in terms of life-time cumulative energy harvest.
-- [ ] Evaluate in terms of average latest N seconds of energy harvest.
 
 ##### Research Topics
 
