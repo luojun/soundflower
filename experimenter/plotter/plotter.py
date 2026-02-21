@@ -46,7 +46,8 @@ class Plotter(ABC):
 
     @abstractmethod
     def step(self, step_count: int, reward: float, sound_energy: float,
-             cumulative_reward: float, cumulative_sound_energy: float):
+             cumulative_reward: float, cumulative_sound_energy: float,
+             average_energy_last_n_seconds: float = 0.0):
         """
         Update plots with new data point.
 
@@ -54,8 +55,9 @@ class Plotter(ABC):
             step_count: Current step number
             reward: Normalized reward for this step
             sound_energy: Raw sound energy for this step (Joules)
-            cumulative_reward: Cumulative normalized reward
-            cumulative_sound_energy: Cumulative sound energy (Joules)
+            cumulative_reward: Sum of rewards (diagnostic)
+            cumulative_sound_energy: Cumulative sound energy harvested (Joules) — performance
+            average_energy_last_n_seconds: Average harvest rate over last N seconds (J/s) — performance
         """
         pass
 
@@ -97,7 +99,8 @@ class TensorBoardPlotter(Plotter):
         pass
 
     def step(self, step_count: int, reward: float, sound_energy: float,
-             cumulative_reward: float, cumulative_sound_energy: float):
+             cumulative_reward: float, cumulative_sound_energy: float,
+             average_energy_last_n_seconds: float = 0.0):
         """
         Log metrics to TensorBoard.
 
@@ -105,8 +108,9 @@ class TensorBoardPlotter(Plotter):
             step_count: Current step number
             reward: Normalized reward for this step
             sound_energy: Raw sound energy for this step (Joules)
-            cumulative_reward: Cumulative normalized reward
-            cumulative_sound_energy: Cumulative sound energy (Joules)
+            cumulative_reward: Sum of rewards (diagnostic)
+            cumulative_sound_energy: Cumulative sound energy (Joules) — performance
+            average_energy_last_n_seconds: Average harvest rate last N s (J/s) — performance
         """
         if self.writer is None:
             return
@@ -115,6 +119,7 @@ class TensorBoardPlotter(Plotter):
         self.writer.add_scalar('energy', sound_energy, step_count)
         self.writer.add_scalar('cumulative_reward', cumulative_reward, step_count)
         self.writer.add_scalar('cumulative_energy', cumulative_sound_energy, step_count)
+        self.writer.add_scalar('average_energy_last_n_seconds', average_energy_last_n_seconds, step_count)
 
     def finish(self):
         """Finish plotting (close TensorBoard writer)."""
@@ -157,9 +162,10 @@ class MatplotlibPlotter(Plotter):
                 self._step_energies: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
                 self._cumulative_rewards: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
                 self._cumulative_energies: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
+                self._windowed_avgs: Dict[str, Tuple[np.ndarray, np.ndarray]] = defaultdict(lambda: (np.array([]), np.array([])))
                 # Line objects for incremental updates
                 self._line_objects: Dict[str, Dict[str, Optional[plt.Line2D]]] = defaultdict(lambda: {
-                    'reward': None, 'energy': None, 'cum_reward': None, 'cum_energy': None
+                    'reward': None, 'energy': None, 'cum_reward': None, 'cum_energy': None, 'windowed_avg': None
                 })
                 # Update tracking
                 self._known_agents = set()
@@ -177,6 +183,7 @@ class MatplotlibPlotter(Plotter):
                 self.ax_energy = shared_inst.ax_energy
                 self.ax_cum_reward = shared_inst.ax_cum_reward
                 self.ax_cum_energy = shared_inst.ax_cum_energy
+                self.ax_windowed_avg = shared_inst.ax_windowed_avg
                 # Note: agent_name is already set above, and step() will forward to shared instance
                 # Data storage and line objects are on shared_inst, accessed via forwarding
                 return
@@ -221,15 +228,17 @@ class MatplotlibPlotter(Plotter):
         matplotlib.use('TkAgg')  # Use TkAgg backend for interactive mode
         plt.ion()  # Turn on interactive mode
 
-        # Create figure with 4 subplots
-        self.fig, self.axes = plt.subplots(2, 2, figsize=(14, 10))
+        # Create figure with 2x3 subplots (add windowed average as performance metric)
+        self.fig, self.axes = plt.subplots(2, 3, figsize=(16, 10))
         self.fig.suptitle('Sound Flower Simulation Metrics', fontsize=14, fontweight='bold')
 
         # Configure subplots
         self.ax_reward = self.axes[0, 0]
         self.ax_energy = self.axes[0, 1]
+        self.ax_windowed_avg = self.axes[0, 2]
         self.ax_cum_reward = self.axes[1, 0]
         self.ax_cum_energy = self.axes[1, 1]
+        # axes[1, 2] left empty or for future use
 
         self.ax_reward.set_title('Per-Step Reward (Normalized)')
         self.ax_reward.set_xlabel('Step')
@@ -241,12 +250,17 @@ class MatplotlibPlotter(Plotter):
         self.ax_energy.set_ylabel('Energy (J)')
         self.ax_energy.grid(True, alpha=0.3)
 
-        self.ax_cum_reward.set_title('Cumulative Reward (Normalized)')
+        self.ax_windowed_avg.set_title('Avg Harvest Rate (Last N s) — Performance')
+        self.ax_windowed_avg.set_xlabel('Step')
+        self.ax_windowed_avg.set_ylabel('Energy (J/s)')
+        self.ax_windowed_avg.grid(True, alpha=0.3)
+
+        self.ax_cum_reward.set_title('Sum of Rewards (Deltas) — Diagnostic')
         self.ax_cum_reward.set_xlabel('Step')
-        self.ax_cum_reward.set_ylabel('Cumulative Reward')
+        self.ax_cum_reward.set_ylabel('Sum of Rewards')
         self.ax_cum_reward.grid(True, alpha=0.3)
 
-        self.ax_cum_energy.set_title('Cumulative Sound Energy')
+        self.ax_cum_energy.set_title('Energy Harvested (Cumulative) — Performance')
         self.ax_cum_energy.set_xlabel('Step')
         self.ax_cum_energy.set_ylabel('Cumulative Energy (J)')
         self.ax_cum_energy.grid(True, alpha=0.3)
@@ -262,7 +276,8 @@ class MatplotlibPlotter(Plotter):
         # Plots are already initialized, nothing more to do
 
     def step(self, step_count: int, reward: float, sound_energy: float,
-             cumulative_reward: float, cumulative_sound_energy: float):
+             cumulative_reward: float, cumulative_sound_energy: float,
+             average_energy_last_n_seconds: float = 0.0):
         """
         Update plots with new data point.
 
@@ -270,8 +285,9 @@ class MatplotlibPlotter(Plotter):
             step_count: Current step number
             reward: Normalized reward for this step
             sound_energy: Raw sound energy for this step (Joules)
-            cumulative_reward: Cumulative normalized reward
-            cumulative_sound_energy: Cumulative sound energy (Joules)
+            cumulative_reward: Sum of rewards (diagnostic)
+            cumulative_sound_energy: Cumulative sound energy (Joules) — performance
+            average_energy_last_n_seconds: Average harvest rate last N s (J/s) — performance
         """
         # If using shared instance and this is not the main instance, forward to main
         if self._is_shared and hasattr(self, '_shared_instance') and self._shared_instance is not self:
@@ -280,7 +296,8 @@ class MatplotlibPlotter(Plotter):
             self._shared_instance.agent_name = self.agent_name
             self._shared_instance.step(
                 step_count, reward, sound_energy,
-                cumulative_reward, cumulative_sound_energy
+                cumulative_reward, cumulative_sound_energy,
+                average_energy_last_n_seconds,
             )
             self._shared_instance.agent_name = original_name
             return
@@ -295,13 +312,15 @@ class MatplotlibPlotter(Plotter):
 
         # Append data to numpy arrays with rolling window limit
         self._append_data(self.agent_name, step_count, reward, sound_energy,
-                         cumulative_reward, cumulative_sound_energy)
+                         cumulative_reward, cumulative_sound_energy,
+                         average_energy_last_n_seconds)
 
         # Update plots incrementally
         self._update_plots()
 
     def _append_data(self, agent_name: str, step: int, reward: float,
-                    energy: float, cum_reward: float, cum_energy: float):
+                    energy: float, cum_reward: float, cum_energy: float,
+                    windowed_avg: float = 0.0):
         """Append data point with rolling window limit."""
         def append_limited(arr_tuple, x, y):
             x_arr, y_arr = arr_tuple
@@ -321,12 +340,15 @@ class MatplotlibPlotter(Plotter):
             self._cumulative_rewards[agent_name], step, cum_reward)
         self._cumulative_energies[agent_name] = append_limited(
             self._cumulative_energies[agent_name], step, cum_energy)
+        self._windowed_avgs[agent_name] = append_limited(
+            self._windowed_avgs[agent_name], step, windowed_avg)
 
     def _update_plots(self):
         """Update plots incrementally using set_data()."""
         # Update each plot type incrementally
         self._update_plot('reward', self.ax_reward, self._step_rewards)
         self._update_plot('energy', self.ax_energy, self._step_energies)
+        self._update_plot('windowed_avg', self.ax_windowed_avg, self._windowed_avgs)
         self._update_plot('cum_reward', self.ax_cum_reward, self._cumulative_rewards)
         self._update_plot('cum_energy', self.ax_cum_energy, self._cumulative_energies)
 
@@ -368,6 +390,7 @@ class MatplotlibPlotter(Plotter):
         for ax, data_dict in [
             (self.ax_reward, self._step_rewards),
             (self.ax_energy, self._step_energies),
+            (self.ax_windowed_avg, self._windowed_avgs),
             (self.ax_cum_reward, self._cumulative_rewards),
             (self.ax_cum_energy, self._cumulative_energies)
         ]:
@@ -387,7 +410,7 @@ class MatplotlibPlotter(Plotter):
 
     def _update_legend(self):
         """Update legend only when agents change."""
-        for ax in [self.ax_reward, self.ax_energy, self.ax_cum_reward, self.ax_cum_energy]:
+        for ax in [self.ax_reward, self.ax_energy, self.ax_windowed_avg, self.ax_cum_reward, self.ax_cum_energy]:
             ax.legend(loc='best', fontsize=10, ncol=2)
 
     def finish(self):

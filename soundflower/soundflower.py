@@ -1,6 +1,6 @@
 """SoundFlower interface - orchestrates the SoundFlower mini-world."""
 
-import asyncio
+from collections import deque
 from typing import Optional, Callable, Dict, Any
 from environment import Environment
 from experimenter.animator import Animator
@@ -61,6 +61,8 @@ class SoundFlower:
         self.step_count = 0
 
         self.cumulative_sound_energy = 0.0
+        self._energy_history: deque = deque()  # (t, E) for windowed average
+        self.average_energy_last_n_seconds = 0.0
 
     def start(self):
         if self.logger:
@@ -110,6 +112,23 @@ class SoundFlower:
                 self.animator.step(self.environment)
                 self.time_since_last_frame = 0.0
 
+        self.simulation_time += self.config.dt
+        self.step_count += 1
+
+        # Windowed average: (t, E) history for last N seconds
+        step_energy = environment_state.sound_energy if environment_state.sound_energy is not None else 0.0
+        self._energy_history.append((self.simulation_time, step_energy))
+        window_sec = getattr(self.config, "performance_window_seconds", 10.0)
+        cutoff = self.simulation_time - window_sec
+        while self._energy_history and self._energy_history[0][0] < cutoff:
+            self._energy_history.popleft()
+        if self._energy_history and window_sec > 0:
+            duration = min(self.simulation_time, window_sec)
+            total_in_window = sum(e for _, e in self._energy_history)
+            self.average_energy_last_n_seconds = total_in_window / duration if duration > 0 else 0.0
+        else:
+            self.average_energy_last_n_seconds = 0.0
+
         if self.plotter:
             self.time_since_last_plot += self.config.dt
 
@@ -117,14 +136,12 @@ class SoundFlower:
                 self.plotter.step(
                     self.step_count,
                     environment_state.reward,
-                    environment_state.sound_energy if environment_state.sound_energy is not None else 0.0,
+                    step_energy,
                     self.cumulative_reward,
-                    self.cumulative_sound_energy
+                    self.cumulative_sound_energy,
+                    self.average_energy_last_n_seconds,
                 )
                 self.time_since_last_plot = 0.0
-
-        self.simulation_time += self.config.dt
-        self.step_count += 1
 
     def forward(self, n_steps: int):
         """
@@ -156,7 +173,8 @@ class SoundFlower:
                 environment_state.reward,
                 environment_state.sound_energy if environment_state.sound_energy is not None else 0.0,
                 self.cumulative_reward,
-                self.cumulative_sound_energy
+                self.cumulative_sound_energy,
+                self.average_energy_last_n_seconds,
             )
             self.time_since_last_plot = 0.0
 

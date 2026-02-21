@@ -2,15 +2,16 @@
 
 ##### Environment Basics
 
-- [ ] Clarify relation between reward, energy delta, cumulative reward, and cumulative energy.
+- [x] Clarify relation between reward, energy delta, cumulative reward, and cumulative energy.
+- [x] Validate the clarified relation with 2-link and 3-link arms.
 - [ ] Use 1-link arm (Rotato!) to validate and illustate the claified relation.
-- [ ] Validate the clarified relation with 2-link and 3-link arms.
 - [ ] Consider sound sources moving in straight lines.
 - [ ] Consider sound sources doing human-like random walk.
 
 ##### Sensorimotor Abstraction
 
 - [ ] Clarify sensorimotor abstraction (representation learning) w.r.t. 1-, 2-, 3-link crossed with rotating, straightining, and random-walking sound sources.
+- [ ] Investigate conditions and experimental setups for illustrating the continual learning and using of good representations.
 
 ##### Experiment and Evaluation
 

@@ -8,9 +8,11 @@ also reminiscent of "sound world" in [Individuals](https://www.routledge.com/Ind
 
 ![Animation screenshot with 6 instances running](/assets/animation.png)
 
-Sound Flower is a 2D robotic arm reinforcement learning environment where an agent controls a multi-link robotic arm to track sound sources. The arm is mounted at the center of a circle, with microphones at its tip. The agent receives rewards based on the sound energy captured by the microphones.
+Sound Flower is a 2D robotic arm reinforcement learning environment where an agent controls a multi-link robotic arm to track sound sources. The arm is mounted at the center of a circle, with microphones at its tip. The agent’s learning signal is the *change* in sound energy captured per step (energy delta); performance is evaluated by total energy harvested and by average harvest rate over the last N seconds. See [DESIGN.md](DESIGN.md) for reward vs. performance and how metrics are defined.
 
 ![Performance plots for 6 instances](/assets/plots.png)
+
+Design notes (reward, energy, and performance metrics) are in **[DESIGN.md](DESIGN.md)**.
 
 ##### Features
 

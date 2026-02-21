@@ -57,6 +57,9 @@ class SoundFlowerConfig:
     # Reward normalization
     reward_normalization_factor: float = None  # Auto-computed if None
 
+    # Performance: window for "average harvest over last N seconds" (seconds)
+    performance_window_seconds: float = 10.0
+
     # Observation mode ("sensorimotor" or "full")
     observation_mode: str = "full"
 

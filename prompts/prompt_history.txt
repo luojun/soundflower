@@ -905,3 +905,50 @@ then compute and return action for obs, store prev feats/action.
 env.apply(action); pass reward into decide for continual-agent step tests.
 ~~
 
+~~
+Ask
+~
+OK. Let's investigage into what we have and what we want. The project
+is about sensorimotor abstraction. We have come a long way in terms
+of implementing stuff. But we run the risk of losing sight of what we
+want. Take a look at @TODO.md (3-13) specifically for more context.
+I think we will need to be very clear about how current evaluation or
+performance tracking means. Should the performance be measured in
+terms of "moments of interest" (i.e. change in absolute acoustic
+energy) or in terms of "energy harvested"? How could such a
+performance goal guide the learning of the appropriate sensorimotor
+abstraction that are arguably a form of spatial representation?
+Please go through the code and all the relevant notes and come up
+with your analysis and recommendations.
+~
+It indeed seems reasonable to use energy delta as per step reward
+and use energy harvested as overall performance measure. This will
+presumably makes even more sense when the agent is evaluated in
+terms of how quickly it adapts, as a way of also evaluating the
+quality of the learned representations. In other words, leaving
+a gap between learning signal (energy delta) and adaptive success
+(overall energy harvest) seems to be the right strategy for our
+investigation. (There are a lot of subtleties as to how the specifics
+of sensorimotor abstraction should go, even in the 1D case, such as
+in terms of how *I* and moving and how *sound* is changing, in
+terms of registering the most powerful sound source as being "over
+there". But these can be investigated systematically later in detail.)
+~
+Should we still report cumulative reward?
+~~
+
+~~
+Agent
+~
+Please do the following: (1) Introduce a DESIGN.md and add a
+“Reward and Energy” section  to it that states how reward is defined
+as energy delta; (2) Add a "Performance" section to DESIGN.md to explain
+that cumulative sound energy harvested and windowned moving average
+(last N seconds) of energy harvested are the main performance metrics,
+and explain why these are good choices for our purposes; (3) Implement "average
+latest N seconds" and report it as one of the two main performance metrics,
+the other being the cumulative energy; (4) Adjust how plotting and logging
+are done to reflect these changes; (5) Adjust README.md wherever necessary
+to be consistent and reference DESIGN.md from an appropriate location in
+README.md.
+~~
