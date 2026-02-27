@@ -1,5 +1,7 @@
 ### TODO
 
+- [ ] The Observation-Feature-Intent-Command architecture for fast sensorimotor adaptation.
+
 ##### Environment Basics
 
 - [x] Clarify relation between reward, energy delta, cumulative reward, and cumulative energy.
