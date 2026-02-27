@@ -10,7 +10,7 @@
 
 ##### Sensorimotor Abstraction
 
-- [ ] Clarify sensorimotor abstraction (representation learning) w.r.t. 1-, 2-, 3-link crossed with rotating, straightining, and random-walking sound sources.
+- [ ] Clarify sensorimotor abstraction (representation learning) w.r.t. 1-, 2-, 3-link crossed with rotating, straight-lining, and random-walking sound sources.
 - [ ] Investigate conditions and experimental setups for illustrating the continual learning and using of good representations.
 
 ##### Experiment and Evaluation
@@ -77,7 +77,6 @@
 - [ ] Improve UI, animation, and plotting for easiness, visual impact and clarity.
 - [ ] “Conductor” GUI to control variability in real time.
 - [x] “Conductor” keyboard UI for real-time variability control.
-
 
 ##### Research Topics
 

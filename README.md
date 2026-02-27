@@ -20,7 +20,7 @@ Design notes (reward, energy, and performance metrics) are in **[DESIGN.md](DESI
 - **Sound propagation**: Inverse square law sound propagation from sources
 - **Control frequency interface**: Unlike OpenAI Gym's synchronous interface, this environment uses a control interface with configurable frequency for agent-environment interaction
 - **Configurable parameters**: Extensive configuration options for arm dynamics, sound sources, and environment properties
-- **Heuristic agent**: Included simple heuristic agent for demonstration
+- **Baseline agents**: Included model-based feedback-control agents, non-learning model-free reactive agents, linear model-free continual RL agents as baselines and for demonstration
 - **Animation**: Real-time animation package for visualizing simulation
 
 ##### Installation
@@ -49,12 +49,3 @@ Run the demo in headless mode (no animation, faster execution):
 ```bash
 python3 demo.py --headless # or demo_suite.py --headless
 ```
-
-##### Heuristic Agents
-
-The included heuristic agents use a simple PD controller to point the arm toward the nearest sound source. They can be used as baselines or starting points for more sophisticated agents.
-
-
-##### License
-
-This project is provided as-is for research and educational purposes.
