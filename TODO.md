@@ -32,6 +32,8 @@
 
 ##### Agent Interface
 
+- [ ] Check the use of intensity_data.
+- [ ] Investigate into the need for including reward in observation. 
 - [x] Full observation mode: expose morphology params and world-frame geometry.
 - [x] Sensorimotor mode: joint angles, angular velocities, angular accelerations, plus sound intensity.
 - [x] Action observations: motor commands (torque or angular jerk) -- "efference copy".
